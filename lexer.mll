@@ -1,4 +1,5 @@
 {
+    open Ast
     open Lexing
     open Parser
 
@@ -20,6 +21,10 @@
         | "\\t" -> Ast.PCchar '\t'
         | s when String.length s = 1 -> Ast.PCchar s.[0]
         | _ -> raise (Lexing_error "Invalid character constant")
+
+    let loc startpos endpos =
+    { slin = startpos.pos_lnum; scol = startpos.pos_cnum-startpos.pos_bol;
+      elin = endpos.pos_lnum; ecol = endpos.pos_cnum-endpos.pos_bol }
 
 }
 
@@ -78,8 +83,11 @@ and comment = parse (* until the end of the line *)
     | eof { EOF }
 
 and str_lex l = parse (* l is a string list *)
-    | '"' { let char_l = List.map (fun s -> Ast.PEconst (str_to_cchar s)) l in
-            CONST (Ast.PCstring (Ast.PElist (List.rev char_l))) }
+    | '"' { let char_l = List.map (fun s ->
+            Ast.PEconst(str_to_cchar s,
+                        loc lexbuf.lex_start_p lexbuf.lex_curr_p)) l in
+            CONST (Ast.PCstring
+            (Ast.PElist(List.rev char_l, loc lexbuf.lex_start_p lexbuf.lex_curr_p))) }
     | car as c { str_lex (c::l) lexbuf }
     | eof { raise (Lexing_error "Unterminated string") }
     | _ { raise (Lexing_error "Invalid character in a string") }

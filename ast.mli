@@ -1,5 +1,11 @@
-(* Parsing abstract syntax, with the sugar left *)
 type ident = string
+
+type position = {
+    slin: int;
+    elin: int;
+    scol: int;
+    ecol: int
+}
 
 type binop =
     | Badd | Bsub | Bmul 
@@ -7,6 +13,8 @@ type binop =
     | Band | Bor
     | Bconc
     
+(* Parsing abstract syntax, with the sugar left *)
+
 type pconst = 
     | PCbool of bool
     | PCint of int
@@ -14,18 +22,18 @@ type pconst =
     | PCstring of pexpr
 
 and pexpr = 
-    | PEid of ident
-    | PEconst of pconst
-    | PEapp of pexpr * pexpr
-    | PEabs of ident list * pexpr
-    | PEuminus of pexpr
-    | PEbinop of binop * pexpr * pexpr
-    | PElist of pexpr list
-    | PEcond of pexpr * pexpr * pexpr
-    | PElet of pdef list * pexpr
-    | PEcase of pexpr * pexpr * ident * ident * pexpr
-    | PEdo of pexpr list
-    | PEreturn
+    | PEid of ident * position
+    | PEconst of pconst * position
+    | PEapp of pexpr list * position
+    | PEabs of ident list * pexpr * position
+    | PEuminus of pexpr * position
+    | PEbinop of binop * pexpr * pexpr * position
+    | PElist of pexpr list * position
+    | PEcond of pexpr * pexpr * pexpr * position
+    | PElet of pdef list * pexpr * position
+    | PEcase of pexpr * pexpr * ident * ident * pexpr * position
+    | PEdo of pexpr list * position
+    | PEreturn of position
 
 and pdef = { (* f : x1 ... xn -> v *)
     name    : ident; (* f *)

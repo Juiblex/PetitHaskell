@@ -1,5 +1,11 @@
 %{
     open Ast
+    open Lexing
+
+    let loc startpos endpos =
+        { slin = startpos.pos_lnum; scol = startpos.pos_cnum-startpos.pos_bol;
+          elin = endpos.pos_lnum; ecol = endpos.pos_cnum-endpos.pos_bol } 
+
 %}
 
 %token EOF
@@ -41,19 +47,21 @@ prog:
 
 def0:
 |   name = IDENT0; args = IDENT1*; EQSIGN; body = expr
-        { {name = name; body = (if args = [] then body else PEabs(args, body))} }
+        { {name = name; body =
+            (if args = [] then body else PEabs(args, body, loc $startpos $endpos))} }
 ;
 
 def1:
 |   name = IDENT1; args = IDENT1*; EQSIGN; body = expr
-        { {name = name; body = (if args = [] then body else PEabs(args, body))} }
+        { {name = name; body =
+            (if args = [] then body else PEabs(args, body, loc $startpos $endpos))} }
 ;
 
 simple_expr:
 |   LP; e = expr; RP { e }
-|   var = IDENT1 { PEid var }
-|   cst = CONST { PEconst cst }
-|   LB; l = separated_list(COMMA, expr); RB { PElist l }
+|   var = IDENT1 { PEid(var, loc $startpos $endpos) }
+|   cst = CONST { PEconst(cst, loc $startpos $endpos) }
+|   LB; l = separated_list(COMMA, expr); RB { PElist(l, loc $startpos $endpos) }
 ;
 
 sep_maybe(t):
@@ -73,26 +81,27 @@ links:
 ;
 
 expr:
-|   fa = simple_expr+
-        { List.fold_left (fun x y -> PEapp(x, y)) (List.hd fa) (List.tl fa) }
+|   fa = simple_expr+ { if List.length fa = 1 then (List.hd fa) else
+        PEapp(fa, loc $startpos $endpos) }
 
-|   MINUS; e = expr; %prec UMINUS { PEuminus e }
+|   MINUS; e = expr; %prec UMINUS { PEuminus(e, loc $startpos $endpos) }
 
-|   e1 = expr; bin = binop; e2 = expr { PEbinop (bin, e1, e2) }
+|   e1 = expr; bin = binop; e2 = expr { PEbinop (bin, e1, e2, loc $startpos $endpos) }
 
-|   ABST; vars = IDENT1+; ARROW; e = expr { PEabs(vars, e) }
+|   ABST; vars = IDENT1+; ARROW; e = expr { PEabs(vars, e, loc $startpos $endpos) }
 
-|   IF; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr { PEcond(e1, e2, e3) }
+|   IF; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr
+        { PEcond(e1, e2, e3, loc $startpos $endpos) }
 
-|   LET; defs = links; IN; e = expr { PElet(defs, e) }
+|   LET; defs = links; IN; e = expr { PElet(defs, e, loc $startpos $endpos) }
 
 |   CASE; matched = expr; OF; BEGIN; LB; RB; ARROW; empty = expr; SEMICOLON;
         hd = IDENT1; COLON; tl = IDENT1; ARROW; nonempty = expr; SEMICOLON?; END
-        { PEcase(matched, empty, hd, tl, nonempty) }
+        { PEcase(matched, empty, hd, tl, nonempty, loc $startpos $endpos) }
 
-|   DO; BEGIN; es = nonempty_sep_maybe(expr); END { PEdo es }
+|   DO; BEGIN; es = nonempty_sep_maybe(expr); END { PEdo(es, loc $startpos $endpos) }
 
-|   RETURN; LP; RP; { PEreturn }
+|   RETURN; LP; RP; { PEreturn (loc $startpos $endpos)}
 ;
 
 %inline binop:
