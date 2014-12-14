@@ -4,14 +4,10 @@
 
     exception Lexing_error of string
 
-    let begins_line = ref true (* choose whether we're going to be an ident0 *)
-    let setbl () = begins_line := false
-
     let newline lexbuf =
         let pos = lexbuf.lex_curr_p in
         lexbuf.lex_curr_p <-
-            { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum };
-        begins_line := true
+            { pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }
 
     let kwd_tbl =
         ["if", IF; "then", THEN; "else", ELSE; "let", LET; "in", IN;
@@ -35,44 +31,44 @@ let ident = ['a'-'z'] (letter | '_' | ['\''] | digit)*
 let car = [' ' '!' '#'-'[' ']'-'~'] | "\\\\" | "\\\"" | "\\n" | "\\t"
                                  (*   '\\'     '"'     '\n'    '\t' *)
 rule token = parse
-    | space+ { setbl (); token lexbuf }
+    | space+ { token lexbuf }
     | '\n' { newline lexbuf; token lexbuf }
     | "--" { comment lexbuf }
-    | "\\" { setbl (); ABST }
-    | "->" { setbl (); ARROW }
-    | '+' { setbl (); PLUS }
-    | '-' { setbl (); MINUS }
-    | '*' { setbl (); TIMES }
-    | ">=" { setbl (); GRE }
-    | '>' { setbl (); GRT }
-    | "<=" { setbl (); LEE }
-    | '<' { setbl (); LEST }
-    | '=' { setbl (); EQSIGN }
-    | "==" { setbl (); EQ }
-    | "/=" { setbl (); NEQ }
-    | "&&" { setbl (); AND }
-    | "||" { setbl (); OR }
-    | ':' { setbl (); COLON }
-    | '(' { setbl (); LP }
-    | ')' { setbl (); RP }
-    | '[' { setbl (); LB }
-    | ',' { setbl (); COMMA }
-    | ']' { setbl (); RB }
-    | ';' { setbl (); SEMICOLON }
-    | '{' { setbl (); BEGIN }
-    | '}' { setbl (); END }
-    | '\'' (car as c) '\'' { setbl (); CONST (str_to_cchar c) }
-    | '"' { setbl (); str_lex [] lexbuf }
-    | "True" { setbl (); CONST (Ast.Cbool true) }
-    | "False" { setbl (); CONST (Ast.Cbool false) }
+    | "\\" { ABST }
+    | "->" { ARROW }
+    | '+' { PLUS }
+    | '-' { MINUS }
+    | '*' { TIMES }
+    | ">=" { GRE }
+    | '>' { GRT }
+    | "<=" { LEE }
+    | '<' { LEST }
+    | '=' { EQSIGN }
+    | "==" { EQ }
+    | "/=" { NEQ }
+    | "&&" { AND }
+    | "||" { OR }
+    | ':' { COLON }
+    | '(' { LP }
+    | ')' { RP }
+    | '[' { LB }
+    | ',' { COMMA }
+    | ']' { RB }
+    | ';' { SEMICOLON }
+    | '{' { BEGIN }
+    | '}' { END }
+    | '\'' (car as c) '\'' { CONST (str_to_cchar c) }
+    | '"' { str_lex [] lexbuf }
+    | "True" { CONST (Ast.Cbool true) }
+    | "False" { CONST (Ast.Cbool false) }
     | ident as s {
         if List.exists (fun x -> fst x = s) kwd_tbl then
             List.assoc s kwd_tbl
-        else if !begins_line then
-            (setbl(); IDENT0 s)
+        else if lexbuf.lex_start_p.pos_cnum = lexbuf.lex_start_p.pos_bol then
+            IDENT0 s
         else
             IDENT1 s }
-    | integer as s { setbl(); CONST (Ast.Cint (int_of_string s)) }
+    | integer as s { CONST (Ast.Cint (int_of_string s)) }
     | _ { raise (Lexing_error "Invalid lexem") }
     | eof { EOF }
 

@@ -1,3 +1,4 @@
+(* Parsing abstract syntax, with some sugar left *)
 type ident = string
 
 type binop =
