@@ -14,11 +14,11 @@
          "case", CASE; "of", OF; "do", DO; "return", RETURN]
 
     let str_to_cchar = function (* turns an escaped character into the caracter *)
-        | "\\\\" -> Ast.Cchar '\\'
-        | "\\\"" -> Ast.Cchar '"'
-        | "\\n" -> Ast.Cchar '\n'
-        | "\\t" -> Ast.Cchar '\t'
-        | s when String.length s = 1 -> Ast.Cchar s.[0]
+        | "\\\\" -> Ast.PCchar '\\'
+        | "\\\"" -> Ast.PCchar '"'
+        | "\\n" -> Ast.PCchar '\n'
+        | "\\t" -> Ast.PCchar '\t'
+        | s when String.length s = 1 -> Ast.PCchar s.[0]
         | _ -> raise (Lexing_error "Invalid character constant")
 
 }
@@ -59,8 +59,8 @@ rule token = parse
     | '}' { END }
     | '\'' (car as c) '\'' { CONST (str_to_cchar c) }
     | '"' { str_lex [] lexbuf }
-    | "True" { CONST (Ast.Cbool true) }
-    | "False" { CONST (Ast.Cbool false) }
+    | "True" { CONST (Ast.PCbool true) }
+    | "False" { CONST (Ast.PCbool false) }
     | ident as s {
         if List.exists (fun x -> fst x = s) kwd_tbl then
             List.assoc s kwd_tbl
@@ -68,7 +68,7 @@ rule token = parse
             IDENT0 s
         else
             IDENT1 s }
-    | integer as s { CONST (Ast.Cint (int_of_string s)) }
+    | integer as s { CONST (Ast.PCint (int_of_string s)) }
     | _ { raise (Lexing_error "Invalid lexem") }
     | eof { EOF }
 
@@ -78,8 +78,8 @@ and comment = parse (* until the end of the line *)
     | eof { EOF }
 
 and str_lex l = parse (* l is a string list *)
-    | '"' { let char_l = List.map (fun s -> Ast.Econst (str_to_cchar s)) l in
-            CONST (Ast.Cstring (Ast.Elist (List.rev char_l))) }
+    | '"' { let char_l = List.map (fun s -> Ast.PEconst (str_to_cchar s)) l in
+            CONST (Ast.PCstring (Ast.PElist (List.rev char_l))) }
     | car as c { str_lex (c::l) lexbuf }
     | eof { raise (Lexing_error "Unterminated string") }
     | _ { raise (Lexing_error "Invalid character in a string") }

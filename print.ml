@@ -34,32 +34,33 @@ let affiche p =
     let rec p_const c =
         hyphens ();
         begin match c with
-            | Cbool b -> print_string "Cbool "; print_bool b;
-            | Cint i -> print_string "Cint "; print_int i;
-            | Cchar c -> Printf.printf "'%c'" c
-            | Cstring (Elist l) -> print_endline "Cstring"; List.iter p_expr l
-            | Cstring _ -> failwith "String error"
+            | PCbool b -> print_string "PCbool "; print_bool b;
+            | PCint i -> print_string "PCint "; print_int i;
+            | PCchar c -> Printf.printf "'%c'" c
+            | PCstring (PElist l) -> print_endline "PCstring"; List.iter p_expr l
+            | PCstring _ -> failwith "String error"
         end;
         print_newline ();
     and p_expr exp =
         hyphens ();
         incr prof;
         begin match exp with
-            | Eid i -> print_string "Eid "; print_endline i;
-            | Econst c -> print_endline "Econst "; p_const c
-            | Eapp (e1, e2) -> print_endline "Eapp"; p_expr e1; p_expr e2
-            | Eabs (i, e) -> print_string "Eabs "; print_endline i; p_expr e
-            | Euminus e -> print_endline "Euminus"; p_expr e
-            | Ebinop(b, e1, e2) -> print_endline "Ebinop"; p_binop b;
+            | PEid i -> print_string "PEid "; print_endline i;
+            | PEconst c -> print_endline "PEconst "; p_const c
+            | PEapp (e1, e2) -> print_endline "PEapp"; p_expr e1; p_expr e2
+            | PEabs (is, e) -> print_string "PEabs ";
+                List.iter (Printf.printf "%s ") is; print_newline (); p_expr e
+            | PEuminus e -> print_endline "PEuminus"; p_expr e
+            | PEbinop(b, e1, e2) -> print_endline "PEbinop"; p_binop b;
                 p_expr e1; p_expr e2;
-            | Elist l -> print_endline "Elist"; List.iter p_expr l
-            | Econd (e1, e2, e3) -> print_endline "Econd";
+            | PElist l -> print_endline "PElist"; List.iter p_expr l
+            | PEcond (e1, e2, e3) -> print_endline "PEcond";
                 p_expr e1; p_expr e2; p_expr e3
-            | Elet (d, e) -> print_endline "Elet"; p_def d; p_expr e
-            | Ecase (e1, e2, i1, i2, e3) -> print_endline "Ecase"; p_expr e1;
-                p_expr e2; p_expr (Eid i1); p_expr (Eid i2); p_expr e3
-            | Edo l -> print_endline "Edo"; List.iter p_expr l
-            | Ereturn -> print_endline "Ereturn"
+            | PElet (ds, e) -> print_endline "PElet"; List.iter p_def ds; p_expr e
+            | PEcase (e1, e2, i1, i2, e3) -> print_endline "PEcase"; p_expr e1;
+                p_expr e2; p_expr (PEid i1); p_expr (PEid i2); p_expr e3
+            | PEdo l -> print_endline "PEdo"; List.iter p_expr l
+            | PEreturn -> print_endline "PEreturn"
         end;
         decr prof;
     and p_def d =

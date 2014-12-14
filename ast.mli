@@ -1,4 +1,4 @@
-(* Parsing abstract syntax, with some sugar left *)
+(* Parsing abstract syntax, with the sugar left *)
 type ident = string
 
 type binop =
@@ -7,29 +7,29 @@ type binop =
     | Band | Bor
     | Bconc
     
-type const = 
-    | Cbool of bool
-    | Cint of int
-    | Cchar of char
-    | Cstring of expr
+type pconst = 
+    | PCbool of bool
+    | PCint of int
+    | PCchar of char
+    | PCstring of pexpr
 
-and expr = 
-    | Eid of ident
-    | Econst of const
-    | Eapp of expr * expr
-    | Eabs of ident * expr
-    | Euminus of expr
-    | Ebinop of binop * expr * expr
-    | Elist of expr list
-    | Econd of expr * expr * expr
-    | Elet of def * expr
-    | Ecase of expr * expr * ident * ident * expr
-    | Edo of expr list
-    | Ereturn
+and pexpr = 
+    | PEid of ident
+    | PEconst of pconst
+    | PEapp of pexpr * pexpr
+    | PEabs of ident list * pexpr
+    | PEuminus of pexpr
+    | PEbinop of binop * pexpr * pexpr
+    | PElist of pexpr list
+    | PEcond of pexpr * pexpr * pexpr
+    | PElet of pdef list * pexpr
+    | PEcase of pexpr * pexpr * ident * ident * pexpr
+    | PEdo of pexpr list
+    | PEreturn
 
-and def = { (* f : x -> v *)
+and pdef = { (* f : x1 ... xn -> v *)
     name    : ident; (* f *)
-    body    : expr (* \x.v *)
+    body    : pexpr (* \x1 ... xn . v *)
 }
 
-type program = {defs : def list}
+type pprogram = {defs : pdef list}
