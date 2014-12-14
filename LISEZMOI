@@ -1,0 +1,17 @@
+Choix techniques :
+	J'ai choisi de ne pas différencier expr et simple_expr dans la syntaxe
+	abstraite.
+	Pour tenir compte de la différence entre def et def0, je maintiens à jour un
+	booléen qui indique si le prochain ident lu sera un ident1 ou un ident0.
+
+Difficultés rencontrées :
+	La manière dont je traite la différence entre ident et ident0 implique une
+	grosse répétition de code, peu élégante, dans le lexer.
+	La manière dont je gère les chaînes de caractères peut aussi probablement être
+	améliorée : les traiter comme des listes implique que le type const dépende du
+	type expr, ce qui nuit à la clarté et à la logique du code.
+
+	J'ai résolu le conflit shift/reduce lié à la présence possible d'un ';' à la
+	fin des do et def en modifiant légèrement la grammaire, en considérant une
+	liste de t séparés par des ';', avec éventuellement un ';' final, comme
+	(t ;) t?.
