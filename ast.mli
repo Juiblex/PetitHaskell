@@ -31,7 +31,7 @@ and pexpr =
     | PElist of pexpr list * position
     | PEcond of pexpr * pexpr * pexpr * position
     | PElet of pdef list * pexpr * position
-    | PEcase of pexpr * pexpr * ident * ident * pexpr * position
+    | PEcase of pexpr * pexpr * ident * position * ident * position * pexpr * position
     | PEdo of pexpr list * position
     | PEreturn of position
 

@@ -97,7 +97,8 @@ expr:
 
 |   CASE; matched = expr; OF; BEGIN; LB; RB; ARROW; empty = expr; SEMICOLON;
         hd = IDENT1; COLON; tl = IDENT1; ARROW; nonempty = expr; SEMICOLON?; END
-        { PEcase(matched, empty, hd, tl, nonempty, loc $startpos $endpos) }
+        { PEcase(matched, empty, hd, loc $startpos(hd) $endpos(hd),
+        tl, loc $startpos(tl) $endpos(tl), nonempty, loc $startpos $endpos) }
 
 |   DO; BEGIN; es = nonempty_sep_maybe(expr); END { PEdo(es, loc $startpos $endpos) }
 

@@ -14,7 +14,7 @@
         ["if", IF; "then", THEN; "else", ELSE; "let", LET; "in", IN;
          "case", CASE; "of", OF; "do", DO; "return", RETURN]
 
-    let str_to_cchar = function (* turns an escaped character into the caracter *)
+    let str_to_cchar = function (* turns an escaped character into the character *)
         | "\\\\" -> Ast.PCchar '\\'
         | "\\\"" -> Ast.PCchar '"'
         | "\\n" -> Ast.PCchar '\n'
@@ -25,6 +25,8 @@
     let loc startpos endpos =
     { slin = startpos.pos_lnum; scol = startpos.pos_cnum-startpos.pos_bol;
       elin = endpos.pos_lnum; ecol = endpos.pos_cnum-endpos.pos_bol }
+
+    let begin_pos = ref dummy_pos
 
 }
 
@@ -63,7 +65,7 @@ rule token = parse
     | '{' { BEGIN }
     | '}' { END }
     | '\'' (car as c) '\'' { CONST (str_to_cchar c) }
-    | '"' { str_lex [] lexbuf }
+    | '"' { begin_pos := lexbuf.lex_start_p; str_lex [] lexbuf }
     | "True" { CONST (Ast.PCbool true) }
     | "False" { CONST (Ast.PCbool false) }
     | ident as s {
@@ -82,13 +84,13 @@ and comment = parse (* until the end of the line *)
     | _ { comment lexbuf }
     | eof { EOF }
 
-and str_lex l = parse (* l is a string list *)
-    | '"' { let char_l = List.map (fun s ->
-            Ast.PEconst(str_to_cchar s,
-                        loc lexbuf.lex_start_p lexbuf.lex_curr_p)) l in
-            CONST (Ast.PCstring
-            (Ast.PElist(List.rev char_l, loc lexbuf.lex_start_p lexbuf.lex_curr_p))) }
-    | car as c { str_lex (c::l) lexbuf }
+and str_lex l = parse (* l is a PEConst list *)
+    | '"' { CONST (Ast.PCstring(Ast.PElist(List.rev l,
+            loc !begin_pos lexbuf.lex_curr_p))) }
+    | car as c {
+        let x = str_to_cchar c in
+        let pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p in
+        str_lex ((Ast.PEconst(x, pos))::l) lexbuf }
     | eof { raise (Lexing_error "Unterminated string") }
     | _ { raise (Lexing_error "Invalid character in a string") }
 

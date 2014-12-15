@@ -35,7 +35,7 @@ let affiche p =
         if p.slin = p.elin then
             Printf.printf "line %d, characters %d-%d\n" p.slin p.scol p.ecol
         else
-            Printf.printf "line %d character %d - Line %d character %d\n"
+            Printf.printf "line %d character %d - line %d character %d\n"
                 p.slin p.scol p.elin p.ecol
     in
     let rec p_const c =
@@ -67,8 +67,9 @@ let affiche p =
                 p_expr e1; p_expr e2; p_expr e3
             | PElet (ds, e, p) -> print_string "PElet "; p_pos p;
                 List.iter p_def ds; p_expr e
-            | PEcase (e1, e2, i1, i2, e3, p) -> print_string "PEcase "; p_pos p;
-                p_expr e1; p_expr e2; print_string i1; print_string i2; p_expr e3
+            | PEcase (e1, e2, i1, p1, i2, p2, e3, p) -> print_string "PEcase ";
+                p_pos p; p_expr e1; p_expr e2; p_expr (PEid(i1, p1));
+                p_expr (PEid(i2, p2)); p_expr e3
             | PEdo(l, p) -> print_string "PEdo "; p_pos p; List.iter p_expr l
             | PEreturn p-> print_string "PEreturn "; p_pos p 
         end;
