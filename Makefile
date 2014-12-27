@@ -1,4 +1,4 @@
-FLAGS = -use-menhir
+FLAGS = -use-menhir -cflag -annot
 EXEC = petitghc
 TARGET = main.native
 

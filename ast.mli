@@ -1,4 +1,10 @@
-type ident = string
+type binop =
+    | Badd | Bsub | Bmul 
+    | Blt | Ble | Bgt | Bge | Beq | Bneq
+    | Band | Bor
+    | Bcons
+    
+(* Parsing abstract syntax, with sugar *)
 
 type position = {
     slin: int;
@@ -7,13 +13,11 @@ type position = {
     ecol: int
 }
 
-type binop =
-    | Badd | Bsub | Bmul 
-    | Blt | Ble | Bgt | Bge | Beq | Bneq
-    | Band | Bor
-    | Bconc
-    
-(* Parsing abstract syntax, with the sugar left *)
+type pident = {
+    pid: string;
+    pos: position;
+}
+
 
 type pconst = 
     | PCbool of bool
@@ -21,23 +25,74 @@ type pconst =
     | PCchar of char
     | PCstring of pexpr
 
-and pexpr = 
-    | PEid of ident * position
-    | PEconst of pconst * position
-    | PEapp of pexpr list * position
-    | PEabs of ident list * pexpr * position
-    | PEuminus of pexpr * position
-    | PEbinop of binop * pexpr * pexpr * position
-    | PElist of pexpr list * position
-    | PEcond of pexpr * pexpr * pexpr * position
-    | PElet of pdef list * pexpr * position
-    | PEcase of pexpr * pexpr * ident * position * ident * position * pexpr * position
-    | PEdo of pexpr list * position
-    | PEreturn of position
-
-and pdef = { (* f : x1 ... xn -> v *)
-    name    : ident; (* f *)
-    body    : pexpr (* \x1 ... xn . v *)
+and pexpr = {
+    pdesc: pdesc;
+    pos: position 
 }
 
-type pprogram = {defs : pdef list}
+and pdesc = 
+    | PEid of pident
+    | PEconst of pconst
+    | PEapp of pexpr list
+    | PEabs of pident list * pexpr
+    | PEuminus of pexpr
+    | PEbinop of binop * pexpr * pexpr
+    | PElist of pexpr list
+    | PEcond of pexpr * pexpr * pexpr
+    | PElet of pdef list * pexpr
+    | PEcase of pexpr * pexpr * pident * pident * pexpr
+    | PEdo of pexpr list 
+    | PEreturn
+
+and pdef = { (* f : x1 ... xn -> v *)
+    pname    : pident; (* f *)
+    pbody    : pexpr (* \x1 ... xn . v *)
+}
+
+type pprogram = {pdefs : pdef list}
+
+(* Typing abstract syntax, sugar-free *)
+
+type typ =
+    | Tbool
+    | Tchar
+    | Tint
+    | Tio
+    | Tlist of typ
+    | Tarrow of typ * typ
+    | Tvar of tvar
+
+and tvar = {id: int; mutable def: typ option}
+
+type tident = string
+
+type tconst =
+    | TCbool of bool
+    | TCint of int
+    | TCchar of char
+
+type texpr = {
+    tdesc: tdesc;
+    typ: typ
+}
+
+and tdesc = 
+   | TEid of tident
+   | TEconst of tconst
+   | TEapp of texpr * texpr
+   | TEabs of tident * texpr
+   | TEuminus of texpr
+   | TEbinop of binop * texpr * texpr
+   | TEnil (* the empty list *)
+   | TEcond of texpr * texpr * texpr
+   | TElet of tdef list * texpr
+   | TEcase of texpr * texpr * tident * tident * texpr
+   | TEdo of texpr list
+   | TEreturn
+
+and tdef = {
+    tname: tident;
+    tbody: texpr
+}
+
+type tprogram = {tdefs: tdef list}

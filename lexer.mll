@@ -14,7 +14,8 @@
         ["if", IF; "then", THEN; "else", ELSE; "let", LET; "in", IN;
          "case", CASE; "of", OF; "do", DO; "return", RETURN]
 
-    let str_to_cchar = function (* turns an escaped character into the character *)
+    let str_to_cchar = function (* turns an escaped character
+    into the character itself *)
         | "\\\\" -> Ast.PCchar '\\'
         | "\\\"" -> Ast.PCchar '"'
         | "\\n" -> Ast.PCchar '\n'
@@ -72,9 +73,9 @@ rule token = parse
         if List.exists (fun x -> fst x = s) kwd_tbl then
             List.assoc s kwd_tbl
         else if lexbuf.lex_start_p.pos_cnum = lexbuf.lex_start_p.pos_bol then
-            IDENT0 s
+            IDENT0 { pid = s; pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p }
         else
-            IDENT1 s }
+            IDENT1 { pid = s; pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p } }
     | integer as s { CONST (Ast.PCint (int_of_string s)) }
     | _ { raise (Lexing_error "Invalid lexem") }
     | eof { EOF }
@@ -85,12 +86,13 @@ and comment = parse (* until the end of the line *)
     | eof { EOF }
 
 and str_lex l = parse (* l is a PEConst list *)
-    | '"' { CONST (Ast.PCstring(Ast.PElist(List.rev l,
-            loc !begin_pos lexbuf.lex_curr_p))) }
+    | '"' { CONST (Ast.PCstring(
+        { pdesc = Ast.PElist (List.rev l);
+            pos = loc !begin_pos lexbuf.lex_curr_p })) }
     | car as c {
         let x = str_to_cchar c in
         let pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p in
-        str_lex ((Ast.PEconst(x, pos))::l) lexbuf }
+        str_lex ({ pdesc = Ast.PEconst x; pos =  pos }::l) lexbuf }
     | eof { raise (Lexing_error "Unterminated string") }
     | _ { raise (Lexing_error "Invalid character in a string") }
 

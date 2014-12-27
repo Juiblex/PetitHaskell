@@ -10,8 +10,8 @@
 
 %token EOF
 %token <Ast.pconst> CONST
-%token <Ast.ident> IDENT0
-%token <Ast.ident> IDENT1
+%token <Ast.pident> IDENT0
+%token <Ast.pident> IDENT1
 %token PLUS MINUS TIMES
 %token UMINUS
 %token EQSIGN LP RP
@@ -42,26 +42,29 @@
 %%
 
 prog:
-|   defs = def0*; EOF { {defs = defs} }
+|   defs = def0*; EOF { {pdefs = defs} }
 ;
 
 def0:
 |   name = IDENT0; args = IDENT1*; EQSIGN; body = expr
-        { {name = name; body =
-            (if args = [] then body else PEabs(args, body, loc $startpos $endpos))} }
+        { {pname = name; pbody =
+            (if args = [] then body else
+                {pdesc = PEabs(args, body); pos = loc $startpos $endpos})} }
 ;
 
 def1:
 |   name = IDENT1; args = IDENT1*; EQSIGN; body = expr
-        { {name = name; body =
-            (if args = [] then body else PEabs(args, body, loc $startpos $endpos))} }
+        { {pname = name; pbody =
+            (if args = [] then body else
+                {pdesc = PEabs(args, body); pos = loc $startpos $endpos})} }
 ;
 
 simple_expr:
 |   LP; e = expr; RP { e }
-|   var = IDENT1 { PEid(var, loc $startpos $endpos) }
-|   cst = CONST { PEconst(cst, loc $startpos $endpos) }
-|   LB; l = separated_list(COMMA, expr); RB { PElist(l, loc $startpos $endpos) }
+|   var = IDENT1 { {pdesc = PEid var; pos = loc $startpos $endpos} }
+|   cst = CONST { {pdesc = PEconst cst; pos = loc $startpos $endpos} }
+|   LB; l = separated_list(COMMA, expr); RB
+        { {pdesc = PElist l; pos = loc $startpos $endpos} }
 ;
 
 sep_maybe(t):
@@ -82,27 +85,32 @@ links:
 
 expr:
 |   fa = simple_expr+ { if List.length fa = 1 then (List.hd fa) else
-        PEapp(fa, loc $startpos $endpos) }
+        {pdesc = PEapp fa; pos = loc $startpos $endpos} }
 
-|   MINUS; e = expr; %prec UMINUS { PEuminus(e, loc $startpos $endpos) }
+|   MINUS; e = expr; %prec UMINUS
+        { {pdesc = PEuminus e; pos = loc $startpos $endpos} }
 
-|   e1 = expr; bin = binop; e2 = expr { PEbinop (bin, e1, e2, loc $startpos $endpos) }
+|   e1 = expr; bin = binop; e2 = expr
+        { {pdesc = PEbinop(bin, e1, e2); pos = loc $startpos $endpos} }
 
-|   ABST; vars = IDENT1+; ARROW; e = expr { PEabs(vars, e, loc $startpos $endpos) }
+|   ABST; vars = IDENT1+; ARROW; e = expr
+        { {pdesc = PEabs(vars, e); pos = loc $startpos $endpos} }
 
 |   IF; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr
-        { PEcond(e1, e2, e3, loc $startpos $endpos) }
+        { {pdesc = PEcond(e1, e2, e3); pos = loc $startpos $endpos} }
 
-|   LET; defs = links; IN; e = expr { PElet(defs, e, loc $startpos $endpos) }
+|   LET; defs = links; IN; e = expr
+        { {pdesc = PElet(defs, e); pos = loc $startpos $endpos} }
 
 |   CASE; matched = expr; OF; BEGIN; LB; RB; ARROW; empty = expr; SEMICOLON;
         hd = IDENT1; COLON; tl = IDENT1; ARROW; nonempty = expr; SEMICOLON?; END
-        { PEcase(matched, empty, hd, loc $startpos(hd) $endpos(hd),
-        tl, loc $startpos(tl) $endpos(tl), nonempty, loc $startpos $endpos) }
+        { {pdesc = PEcase(matched, empty, hd, tl, nonempty);
+            pos = loc $startpos $endpos} }
 
-|   DO; BEGIN; es = nonempty_sep_maybe(expr); END { PEdo(es, loc $startpos $endpos) }
+|   DO; BEGIN; es = nonempty_sep_maybe(expr); END
+        { {pdesc = PEdo es; pos = loc $startpos $endpos} }
 
-|   RETURN; LP; RP; { PEreturn (loc $startpos $endpos)}
+|   RETURN; LP; RP; { {pdesc = PEreturn; pos = loc $startpos $endpos} }
 ;
 
 %inline binop:
@@ -117,5 +125,5 @@ expr:
 | NEQ { Bneq }
 | AND { Band }
 | OR { Bor }
-| COLON { Bconc }
+| COLON { Bcons }
 ;
