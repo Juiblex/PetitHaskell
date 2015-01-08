@@ -200,15 +200,12 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         else
             let tl = w env l in
             let te1 = w env e1 in
-            let elem_typ = match tl.typ with
-                | Tlist t -> t
-                | u -> raise (Conflicting_types (l.pos, u,
-                                Tlist (Tvar (Var.create ()))))
-            in
-            let env = add x.pid elem_typ env in
-            let env = add xs.pid (Tlist elem_typ) env in
+            let v = Tvar (Var.create ()) in
+            let env = add x.pid v env in
+            let env = add xs.pid (Tlist v) env in
             let te2 = w env e2 in
             unify_p te1.typ te2.typ e1.pos;
+            unify_p tl.typ v l.pos;
             {tdesc = TEcase (tl, te1, x.pid, xs.pid, te2); typ = te1.typ}
 
     | PEdo es ->
@@ -238,7 +235,7 @@ let type_p prog =
     let tdefs = w_pdef e prog.pdefs in 
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
-        begin match m.tbody.typ with
+        begin match (head m.tbody.typ) with
             | Tio -> ()
             | t -> raise (Wrong_main_type t)
         end; 
