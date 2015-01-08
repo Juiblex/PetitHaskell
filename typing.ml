@@ -235,9 +235,9 @@ let type_p prog =
     let tdefs = w_pdef e prog.pdefs in 
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
-        begin match (head m.tbody.typ) with
-            | Tio -> ()
-            | t -> raise (Wrong_main_type t)
-        end; 
+        begin
+            try unify m.tbody.typ Tio with Unification_failure (t, _) ->
+            raise (Wrong_main_type t)
+        end;
         {tdefs = tdefs}
     with Not_found -> raise No_main
