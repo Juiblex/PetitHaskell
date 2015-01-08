@@ -128,7 +128,7 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         let app te1 e2 =
             let te2 = w env e2 in
             let t = Tvar (Var.create ()) in
-            unify_p te1.typ (Tarrow (te2.typ, t)) e.pos;
+            unify_p (Tarrow (te2.typ, t)) te1.typ e2.pos;
             {tdesc = TEapp (te1, te2); typ = t}
         in List.fold_left app (w env e) es 
 
