@@ -92,4 +92,8 @@ let () =
             Printf.printf "line %d, characters %d-%d\n" pid1.pos.slin
               pid1.pos.scol pid1.pos.ecol;
             exit 1
+        | Typing.Redefined_primitive pid ->
+            loc_p pid.pos;
+            Printf.printf "Redefined primitive %s.\n" pid.pid;
+            exit 1
 

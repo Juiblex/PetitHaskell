@@ -12,6 +12,8 @@ exception No_main
 
 exception Wrong_main_type of typ
 
+exception Redefined_primitive of pident
+
 module Var = struct
     type t = tvar
     let compare v1 v2 = Pervasives.compare v1 v2
@@ -229,6 +231,10 @@ let type_p prog =
     let e = add "rem" (Tarrow (Tint, Tarrow (Tint, Tint))) e in
     let e = add "putChar" (Tarrow (Tchar, Tio)) e in
     let e = add_gen "error" (Tarrow (Tlist Tchar, Tvar (Var.create ()))) e in
+    List.iter (fun prim -> let f d = (d.pname.pid = prim) in
+        if (List.exists f prog.pdefs)
+        then raise (Redefined_primitive (List.find f prog.pdefs).pname))
+        ["div"; "rem"; "putChar"; "error"];
     let tdefs = w_pdef e prog.pdefs in 
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
