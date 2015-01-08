@@ -160,10 +160,7 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
             | Band | Bor -> unify_p te1.typ Tbool e1.pos;
                 unify_p te2.typ Tbool e2.pos; Tbool
             | Bcons ->
-                begin match te2.typ with
-                    | Tlist t -> unify_p te1.typ t e2.pos; Tlist te1.typ
-                    | u -> raise (Conflicting_types (e2.pos, u, Tlist te1.typ))
-                end;
+                unify_p te2.typ (Tlist te1.typ) e2.pos; (Tlist te1.typ)
         end in
         {tdesc = TEbinop(b, te1, te2); typ = t}
 
