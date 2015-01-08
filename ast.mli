@@ -81,7 +81,6 @@ and tdesc =
    | TEconst of tconst
    | TEapp of texpr * texpr
    | TEabs of tident * texpr
-   | TEuminus of texpr
    | TEbinop of binop * texpr * texpr
    | TEnil (* the empty list *)
    | TEcond of texpr * texpr * texpr

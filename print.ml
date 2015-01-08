@@ -120,7 +120,6 @@ let taffiche p =
                 p_expr e1; p_expr e2
             | TEabs (id, e) -> print_string "TEabs : "; p_type t;
                 Printf.printf "%s\n" id; p_expr e
-            | TEuminus e -> print_string "TEuminus : "; p_type t; p_expr e
             | TEbinop (b, e1, e2) ->
                 Printf.printf "TEbinop %s : " (bin_to_str b);
                 p_type t; p_expr e1; p_expr e2

@@ -57,15 +57,17 @@ let rec occur tv t = match head t with
     | Tvar tv1 -> Var.equal tv tv1
     | _ -> false
 
-let rec unify typ1 typ2 = match (head typ1, head typ2) with
-    | Tbool, Tbool | Tchar, Tchar | Tint, Tint | Tio, Tio -> ()
-    | Tlist t1, Tlist t2 -> unify t1 t2
-    | Tarrow (t1, t2), Tarrow (u1, u2) -> unify t1 u1; unify t2 u2
-    | Tvar tv1, Tvar tv2 when Var.equal tv1 tv2 -> ()
-    | Tvar tv, _ -> if occur tv typ2 then unification_error typ1 typ2
+let rec unify typ1 typ2 = 
+    let typ1 = head typ1 and typ2 = head typ2 in
+    match typ1, typ2 with
+        | Tbool, Tbool | Tchar, Tchar | Tint, Tint | Tio, Tio -> ()
+        | Tlist t1, Tlist t2 -> unify t1 t2
+        | Tarrow (t, t'), Tarrow (u, u') -> unify t u; unify t' u'
+        | Tvar tv1, Tvar tv2 when Var.equal tv1 tv2 -> ()
+        | Tvar tv, _ -> if occur tv typ2 then unification_error typ1 typ2
             else tv.def <- Some typ2
-    | _, Tvar tv -> unify typ2 typ1
-    | _ -> unification_error typ1 typ2
+        | _, Tvar tv -> unify typ2 typ1
+        | _ -> unification_error typ1 typ2
 
 let unify_p t1 t2 p =
     try unify t1 t2
@@ -145,7 +147,8 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
     | PEuminus e ->
         let te = w env e in
         unify_p te.typ Tint e.pos;
-        {tdesc = TEuminus te; typ = Tint}
+        {tdesc = TEbinop(Bsub, {tdesc = TEconst (TCint 0); typ = Tint}, te);
+         typ = Tint}
 
     | PEbinop (b, e1, e2) ->
         let te1 = w env e1 and te2 = w env e2 in
@@ -228,7 +231,11 @@ and w_pdef env defs =
         {tname = n.pid; tbody = w env1 b}) defs
     
 let type_p prog =
-    let tdefs = w_pdef empty prog.pdefs in 
+    let e = add "div" (Tarrow (Tint, Tarrow (Tint, Tint))) empty in
+    let e = add "rem" (Tarrow (Tint, Tarrow (Tint, Tint))) e in
+    let e = add "putChar" (Tarrow (Tchar, Tio)) e in
+    let e = add_gen "error" (Tarrow (Tlist Tchar, Tvar (Var.create ()))) e in
+    let tdefs = w_pdef e prog.pdefs in 
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
         begin match m.tbody.typ with
