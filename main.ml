@@ -1,7 +1,9 @@
+open Ast
 open Format
 open Lexing
 open Typing
-open Ast
+open Thunk
+open Mips
 
 let parse_only = ref false
 let print_past = ref false
@@ -24,7 +26,7 @@ let usage = "petitghc [options] file.hs"
 
 let loc_p p =
     Printf.printf "File \"%s\", line %d, characters %d-%d:\n" !ifile
-        p.slin p.scol p.ecol
+        p.slin (p.scol+1) (p.ecol+1)
 
 let localisation pos = 
     let l = pos.pos_lnum in

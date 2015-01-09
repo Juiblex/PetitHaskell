@@ -61,7 +61,7 @@ def1:
 
 simple_expr:
 |   LP; e = expr; RP { e }
-|   var = IDENT1 { {pdesc = PEid var; pos = loc $startpos $endpos} }
+|   var = IDENT1 { {pdesc = PEvar var; pos = loc $startpos $endpos} }
 |   cst = CONST { {pdesc = PEconst cst; pos = loc $startpos $endpos} }
 |   LB; l = separated_list(COMMA, expr); RB
         { {pdesc = PElist l; pos = loc $startpos $endpos} }

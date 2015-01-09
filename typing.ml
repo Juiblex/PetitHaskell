@@ -106,18 +106,18 @@ let find x env =
     in inst sch_x.styp
 
 let rec w env {pdesc = expr; pos = pos} = match expr with
-    | PEid x -> {tdesc = TEid x.pid;
+    | PEvar x -> {tdesc = TEvar x.pid;
         typ = try find x.pid env
         with Not_found -> raise (Undeclared_variable x)}
 
     | PEconst c -> begin match c with
-        | PCbool b -> {tdesc = TEconst (TCbool b); typ = Tbool}
-        | PCint i -> {tdesc = TEconst (TCint i); typ = Tint}
-        | PCchar c -> {tdesc = TEconst (TCchar c); typ = Tchar}
+        | PCbool b -> {tdesc = TEconst (Cbool b); typ = Tbool}
+        | PCint i -> {tdesc = TEconst (Cint i); typ = Tint}
+        | PCchar c -> {tdesc = TEconst (Cchar c); typ = Tchar}
         | PCstring {pdesc = PElist s} ->
             let add_c l = function 
                 | ({pdesc = PEconst (PCchar c)} : Ast.pexpr) ->
-                    {tdesc = TEbinop (Bcons, {tdesc = TEconst (TCchar c);
+                    {tdesc = TEbinop (Bcons, {tdesc = TEconst (Cchar c);
                                              typ = Tchar}, l);
                      typ = Tlist Tchar}
                 | _ -> failwith "Invalid character"
@@ -149,7 +149,7 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
     | PEuminus e ->
         let te = w env e in
         unify_p te.typ Tint e.pos;
-        {tdesc = TEbinop(Bsub, {tdesc = TEconst (TCint 0); typ = Tint}, te);
+        {tdesc = TEbinop(Bsub, {tdesc = TEconst (Cint 0); typ = Tint}, te);
          typ = Tint}
 
     | PEbinop (b, e1, e2) ->
@@ -186,11 +186,8 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         {tdesc = TEcond (te1, te2, te3); typ = te2.typ}
 
     | PElet (pdefs, e) ->
-        let add_d e d =
-          add_gen d.tname d.tbody.typ e in
-        let tdefs = w_pdef env pdefs in
-        let env1 = List.fold_left add_d env tdefs in
-        let te = w env1 e in
+        let env, tdefs = w_pdef env pdefs in
+        let te = w env e in
         {tdesc = TElet(tdefs, te); typ = te.typ}
               
     | PEcase (l, e1, x, xs, e2) ->
@@ -218,13 +215,21 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
     | PEreturn -> {tdesc = TEreturn; typ = Tio}
     | _ -> failwith "Invalid type"
 
-and w_pdef env defs =
-    check_multiple (List.map (fun d -> d.pname) defs);
-    let add_d e d =
-        add d.pname.pid (Tvar (Var.create ())) e in
-    let env1 = List.fold_left add_d env defs in
-    List.map (fun {pname = n; pbody = b} ->
-        {tname = n.pid; tbody = w env1 b}) defs
+and w_pdef env pdefs =
+    check_multiple (List.map (fun d -> d.pname) pdefs);
+    let add_p e d = add d.pname.pid (Tvar (Var.create ())) e in
+    let add_t e d = add_gen d.tname d.tbody.typ e in
+    let env = List.fold_left add_p env pdefs in
+    let tdefs_p = List.map (fun {pname = n; pbody = b} ->
+        {tname = n.pid; tbody = w env b}, n.pos) pdefs in
+    List.iter (fun (d, pos) ->
+            unify_p d.tbody.typ
+            (w env {pdesc = PEvar {pid = d.tname; pos = pos}; pos = pos}).typ
+            pos)
+        tdefs_p;
+    let tdefs = List.map (fun (x, y) -> x) tdefs_p in
+    let env = List.fold_left add_t env tdefs in
+    env, tdefs
     
 let type_p prog =
     let e = add "div" (Tarrow (Tint, Tarrow (Tint, Tint))) empty in
@@ -235,7 +240,7 @@ let type_p prog =
         if (List.exists f prog.pdefs)
         then raise (Redefined_primitive (List.find f prog.pdefs).pname))
         ["div"; "rem"; "putChar"; "error"];
-    let tdefs = w_pdef e prog.pdefs in 
+    let env, tdefs = w_pdef e prog.pdefs in 
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
         begin

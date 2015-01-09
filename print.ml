@@ -53,7 +53,7 @@ let paffiche p =
         hyphens !prof;
         incr prof;
         begin match exp with
-            | PEid id -> print_string "PEid "; p_ident id
+            | PEvar id -> print_string "PEvar "; p_ident id
             | PEconst c -> print_string "PEconst "; p_pos p; p_const c
             | PEapp el -> print_string "PEapp "; p_pos p;
                 List.iter p_expr el;
@@ -104,9 +104,9 @@ let taffiche p =
     let rec p_const c =
         hyphens !prof;
         begin match c with
-            | TCbool b -> Printf.printf "TCbool %s" (bool_to_str b);
-            | TCint i -> Printf.printf "TCint %d" i
-            | TCchar c -> Printf.printf "TCchar '%c'" c
+            | Cbool b -> Printf.printf "Cbool %s" (bool_to_str b);
+            | Cint i -> Printf.printf "Cint %d" i
+            | Cchar c -> Printf.printf "Cchar '%c'" c
         end;
         print_newline ();
     in
@@ -114,7 +114,7 @@ let taffiche p =
         hyphens !prof;
         incr prof;
         begin match exp with
-            | TEid id -> Printf.printf "TEid %s : " id; p_type t;
+            | TEvar id -> Printf.printf "TEvar %s : " id; p_type t;
             | TEconst c -> print_string "TEconst : "; p_type t; p_const c;
             | TEapp (e1, e2) -> print_string "TEapp : "; p_type t;
                 p_expr e1; p_expr e2

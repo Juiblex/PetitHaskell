@@ -31,7 +31,7 @@ and pexpr = {
 }
 
 and pdesc = 
-    | PEid of pident
+    | PEvar of pident
     | PEconst of pconst
     | PEapp of pexpr list
     | PEabs of pident list * pexpr
@@ -66,10 +66,10 @@ and tvar = {id: int; mutable def: typ option}
 
 type tident = string
 
-type tconst =
-    | TCbool of bool
-    | TCint of int
-    | TCchar of char
+type const =
+    | Cbool of bool
+    | Cint of int
+    | Cchar of char
 
 type texpr = {
     tdesc: tdesc;
@@ -77,8 +77,8 @@ type texpr = {
 }
 
 and tdesc = 
-   | TEid of tident
-   | TEconst of tconst
+   | TEvar of tident
+   | TEconst of const
    | TEapp of texpr * texpr
    | TEabs of tident * texpr
    | TEbinop of binop * texpr * texpr
@@ -95,3 +95,28 @@ and tdef = {
 }
 
 type tprogram = {tdefs: tdef list}
+
+(* Lazy abstract syntax *)
+
+type lident = string
+
+type lexpr =
+    | LEvar of lident
+    | LEconst of const
+    | LEapp of lexpr * lexpr
+    | LEabs of lident * lexpr
+    | LEbinop of binop * lexpr * lexpr
+    | LEnil
+    | LEcond of lexpr * lexpr * lexpr
+    | LElet of ldef list * lexpr
+    | LEcase of lexpr * lexpr * lident * lident * lexpr
+    | LEdo of lexpr list
+    | LEreturn
+    | LEthunk of lexpr
+
+and ldef = {
+    lname: lident;
+    lbody: lexpr
+}
+
+type lprogram = {ldefs: ldef list}
