@@ -115,14 +115,14 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         | PCint i -> {tdesc = TEconst (Cint i); typ = Tint}
         | PCchar c -> {tdesc = TEconst (Cchar c); typ = Tchar}
         | PCstring {pdesc = PElist s} ->
-            let add_c l = function 
+            let add_c t l = match t with 
                 | ({pdesc = PEconst (PCchar c)} : Ast.pexpr) ->
                     {tdesc = TEbinop (Bcons, {tdesc = TEconst (Cchar c);
                                              typ = Tchar}, l);
                      typ = Tlist Tchar}
                 | _ -> failwith "Invalid character"
             in
-            List.fold_left add_c {tdesc = TEnil; typ = Tchar} s
+            List.fold_right add_c s {tdesc = TEnil; typ = Tlist Tchar}
         | PCstring _ -> failwith "Invalid string" (* never happens *)
         end
 
@@ -201,7 +201,7 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
             let env = add xs.pid (Tlist v) env in
             let te2 = w env e2 in
             unify_p te1.typ te2.typ e1.pos;
-            unify_p tl.typ v l.pos;
+            unify_p tl.typ (Tlist v) l.pos;
             {tdesc = TEcase (tl, te1, x.pid, xs.pid, te2); typ = te1.typ}
 
     | PEdo es ->

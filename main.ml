@@ -4,6 +4,7 @@ open Lexing
 open Typing
 open Thunk
 open Closure
+open Alloc
 open Mips
 
 let parse_only = ref false
@@ -23,7 +24,7 @@ let options =
      "  Print the parsing abstract syntax tree";
      "--type-only", Arg.Set type_only,
      "  Stop after typing";
-     "--print-tayst", Arg.Set print_tast,
+     "--print-tast", Arg.Set print_tast,
      "  Print the typed abstract syntax tree"]
 
 let usage = "petitghc [options] file.hs"
@@ -41,12 +42,12 @@ let () =
     Arg.parse options (set_file ifile) usage;
 
     if !ifile == "" then begin
-        Printf.printf "No file to compile.\n";
+        Printf.printf "No file to compile\n";
         exit 1;
     end;
     
     if not (Filename.check_suffix !ifile ".hs") then begin
-        Printf.printf "The file must end in .hs.\n@?";
+        Printf.printf "The file must end in .hs\n";
         Arg.usage options usage;
         exit 1;
     end;
@@ -69,6 +70,7 @@ let () =
         end;
         let p = Thunk.lazify_p p in
         let p = Closure.conv_p p in
+        let p = Alloc.alloc_p p in
         ignore p;
     with
         | Lexer.Lexing_error c -> 

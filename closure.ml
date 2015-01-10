@@ -9,10 +9,10 @@ end
 
 let fundefs = ref []
 
-let set_to_list s = Vset.fold (fun e l -> (Vvar e)::l) s []
+let set_to_list s = Vset.fold (fun e l -> e::l) s []
 
 let rec conv_e arg fvars = function
-    | LEvar x -> if x = arg then CEvar Varg else CEvar (Vvar x)
+    | LEvar x -> if x = arg then CEvar CVarg else CEvar (CVvar x)
 
     | LEconst c -> CEconst c
 
@@ -20,8 +20,9 @@ let rec conv_e arg fvars = function
 
     | LEabs (x, e) ->
         let name = Fvar.create () in
-        fundefs := (CDletfun (name, conv_e x (Vset.add x fvars) e))::(!fundefs);
-        CEclos (x, set_to_list fvars)
+        let args = set_to_list fvars in
+        fundefs := (CDletfun (name, args, conv_e x (Vset.add x fvars) e))::(!fundefs);
+        CEclos (x, args)
 
     | LEbinop (b, e1, e2) -> CEbinop (b, conv_e arg fvars e1, conv_e arg fvars e2)
 

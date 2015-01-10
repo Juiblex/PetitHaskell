@@ -1,9 +1,8 @@
 open Ast
 
-(* In this pass we lazify the program and prefix idents with '_' so that there
- * is no conflict with the assembly code *)
+(* In this pass we lazify expressions and prefix idents with '_' *)
 
-let pref_ = Printf.sprintf "_%s"
+let pref_ s = if s = "main" then s else Printf.sprintf "_%s" s
 
 let freeze e = LEthunk (LEabs ("_", e))
 

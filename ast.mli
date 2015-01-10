@@ -122,14 +122,14 @@ type lprogram = {ldefs: ldef list}
 (* Closure-converted abstract syntax *)
 
 type cvar =
-    | Vvar of ident
-    | Varg
+    | CVvar of ident
+    | CVarg
 
 type cexpr =
     | CEvar of cvar
     | CEconst of const
     | CEapp of cexpr * cexpr
-    | CEclos of ident * cvar list
+    | CEclos of ident * ident list
     | CEbinop of binop * cexpr * cexpr
     | CEnil
     | CEcond of cexpr * cexpr * cexpr
@@ -141,9 +141,35 @@ type cexpr =
     
 and cdef =
     | CDlet of ident * cexpr
-    | CDletfun of ident * cexpr
+    | CDletfun of ident * ident list * cexpr (* name and arguments *)
 
 
 type cprogram = {cdefs: cdef list}
 
 (* Variable-allocated abstract syntax *)
+
+type vvar =
+    | VVglob of ident
+    | VVloc of int (* located at n($fp) *)
+    | VVclos of int (* located at n(closure address) *)
+    | VVarg
+
+type vexpr =
+    | VEvar of vvar
+    | VEconst of const
+    | VEapp of vexpr * vexpr
+    | VEclos of ident * vvar list
+    | VEbinop of binop * vexpr * vexpr
+    | VEnil
+    | VEcond of vexpr * vexpr * vexpr
+    | VElet of (int * vexpr) list * vexpr
+    | VEcase of vexpr * vexpr * int * int * vexpr
+    | VEdo of vexpr list
+    | VEreturn
+    | VEthunk of vexpr
+
+and vdef =
+    | VDlet of ident * vexpr * int
+    | VDletfun of ident * vexpr * int
+
+type vprogram = {vdefs: vdef list}
