@@ -1,9 +1,14 @@
 open Ast
 
+(* In this pass we lazify the program and prefix idents with '_' so that there
+ * is no conflict with the assembly code *)
+
+let pref_ = Printf.sprintf "_%s"
+
 let freeze e = LEthunk (LEabs ("_", e))
 
 let rec lazify_e {tdesc = e} = match e with
-    | TEvar id -> LEvar id
+    | TEvar id -> LEvar (pref_ id)
 
     | TEconst c -> LEconst c 
 
@@ -21,10 +26,13 @@ let rec lazify_e {tdesc = e} = match e with
     | TElet (tdefs, e) -> LElet (List.map lazify_d tdefs, lazify_e e)
 
     | TEcase (l, e1, x, xs, e2) ->
-        LEcase (lazify_e l, freeze (lazify_e e1), x, xs, freeze (lazify_e e2))
+        LEcase (lazify_e l, freeze (lazify_e e1), pref_ x, pref_ xs,
+            freeze (lazify_e e2))
 
     | TEdo exprs -> LEdo (List.map lazify_e exprs)
 
     | TEreturn -> LEreturn
 
-and lazify_d {tname = id; tbody = e} = {lname = id; lbody = freeze (lazify_e e)}
+and lazify_d {tname = id; tbody = e} = {lname = pref_ id; lbody = freeze (lazify_e e)}
+
+let lazify_p p = {ldefs = List.map lazify_d p.tdefs}

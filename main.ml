@@ -3,10 +3,12 @@ open Format
 open Lexing
 open Typing
 open Thunk
+open Closure
 open Mips
 
 let parse_only = ref false
 let print_past = ref false
+let type_only = ref false
 let print_tast = ref false
 
 let ifile = ref ""
@@ -16,10 +18,12 @@ let set_file f s = f := s
 
 let options = 
     ["--parse-only", Arg.Set parse_only,
-     "  Do only the parsing";
+     "  Stop after parsing";
      "--print-past", Arg.Set print_past,
      "  Print the parsing abstract syntax tree";
-     "--print-tast", Arg.Set print_tast,
+     "--type-only", Arg.Set type_only,
+     "  Stop after typing";
+     "--print-tayst", Arg.Set print_tast,
      "  Print the typed abstract syntax tree"]
 
 let usage = "petitghc [options] file.hs"
@@ -58,10 +62,14 @@ let () =
             exit 0;
         end;
         let p = Typing.type_p p in
+        if !type_only then exit 0;
         if !print_tast then begin
             Print.taffiche p; 
             exit 0;
         end;
+        let p = Thunk.lazify_p p in
+        let p = Closure.conv_p p in
+        ignore p;
     with
         | Lexer.Lexing_error c -> 
             localisation (Lexing.lexeme_start_p buf);

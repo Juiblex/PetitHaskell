@@ -64,7 +64,7 @@ type typ =
 
 and tvar = {id: int; mutable def: typ option}
 
-type tident = string
+type ident = string
 
 type const =
     | Cbool of bool
@@ -77,20 +77,20 @@ type texpr = {
 }
 
 and tdesc = 
-   | TEvar of tident
+   | TEvar of ident
    | TEconst of const
    | TEapp of texpr * texpr
-   | TEabs of tident * texpr
+   | TEabs of ident * texpr
    | TEbinop of binop * texpr * texpr
    | TEnil (* the empty list *)
    | TEcond of texpr * texpr * texpr
    | TElet of tdef list * texpr
-   | TEcase of texpr * texpr * tident * tident * texpr
+   | TEcase of texpr * texpr * ident * ident * texpr
    | TEdo of texpr list
    | TEreturn
 
 and tdef = {
-    tname: tident;
+    tname: ident;
     tbody: texpr
 }
 
@@ -98,25 +98,52 @@ type tprogram = {tdefs: tdef list}
 
 (* Lazy abstract syntax *)
 
-type lident = string
-
 type lexpr =
-    | LEvar of lident
+    | LEvar of ident
     | LEconst of const
     | LEapp of lexpr * lexpr
-    | LEabs of lident * lexpr
+    | LEabs of ident * lexpr
     | LEbinop of binop * lexpr * lexpr
     | LEnil
     | LEcond of lexpr * lexpr * lexpr
     | LElet of ldef list * lexpr
-    | LEcase of lexpr * lexpr * lident * lident * lexpr
+    | LEcase of lexpr * lexpr * ident * ident * lexpr
     | LEdo of lexpr list
     | LEreturn
     | LEthunk of lexpr
 
 and ldef = {
-    lname: lident;
+    lname: ident;
     lbody: lexpr
 }
 
 type lprogram = {ldefs: ldef list}
+
+(* Closure-converted abstract syntax *)
+
+type cvar =
+    | Vvar of ident
+    | Varg
+
+type cexpr =
+    | CEvar of cvar
+    | CEconst of const
+    | CEapp of cexpr * cexpr
+    | CEclos of ident * cvar list
+    | CEbinop of binop * cexpr * cexpr
+    | CEnil
+    | CEcond of cexpr * cexpr * cexpr
+    | CElet of (ident * cexpr) list * cexpr
+    | CEcase of cexpr * cexpr * ident * ident * cexpr
+    | CEdo of cexpr list
+    | CEreturn
+    | CEthunk of cexpr
+    
+and cdef =
+    | CDlet of ident * cexpr
+    | CDletfun of ident * cexpr
+
+
+type cprogram = {cdefs: cdef list}
+
+(* Variable-allocated abstract syntax *)
