@@ -5,6 +5,7 @@ open Typing
 open Thunk
 open Closure
 open Alloc
+open Prod
 open Mips
 
 let parse_only = ref false
@@ -71,7 +72,13 @@ let () =
         let p = Thunk.lazify_p p in
         let p = Closure.conv_p p in
         let p = Alloc.alloc_p p in
-        ignore p;
+        let p = Prod.compile_p p in
+        let f = open_out
+            (Printf.sprintf "%s.s" (Filename.chop_suffix !ifile ".hs")) in
+        let fmt = formatter_of_out_channel f in
+        Mips.print_program fmt p;
+        fprintf fmt "@?";
+        close_out f
     with
         | Lexer.Lexing_error c -> 
             localisation (Lexing.lexeme_start_p buf);

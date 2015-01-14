@@ -67,7 +67,9 @@ let rec alloc_e env clos next = function
 
     | CEreturn -> VEreturn, next
     
-    | CEthunk e -> alloc_e env clos next e
+    | CEthunk e ->
+        let ne, n = alloc_e env clos next e in
+        VEthunk ne, n
 
 let alloc_d = function
     | CDlet (id, e) -> 
@@ -78,10 +80,10 @@ let alloc_d = function
     | CDletfun (id, closl, e) -> (* the closure vars are on the heap so no shifting *)
         let rec pos cour = function
             | [] -> Smap.empty
-            | h::t -> Smap.add h cour (pos (cour+8) t)
+            | h::t -> Smap.add h cour (pos (cour+4) t)
         in  
         Hashtbl.replace genv id ();
-        let ne, fpmax = alloc_e Smap.empty (pos 0 closl) 0 e in
+        let ne, fpmax = alloc_e Smap.empty (pos 8 closl) 0 e in
         VDletfun (id, ne, fpmax) 
 
 let alloc_p {cdefs = cdefs} = {vdefs = List.map alloc_d cdefs}

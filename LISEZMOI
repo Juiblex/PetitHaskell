@@ -1,15 +1,44 @@
 Choix techniques :
 
-	J'ai choisi de ne pas différencier expr et simple_expr dans la syntaxe
-	abstraite.
+	On représente une valeur en mémoire par un pointeur vers un bloc sur le tas
+	contenant :
+	- 2 mots [0, n] pour un entier n
+	- 2 mots [1, c] pour un caractère c
+	- 2 mots [2, b] pour un booléen b (0 ou 1)
+	- 3 mots [4, x, xs] pour une liste x:xs où x et xs sont des valeurs
+	- 1 mot [8] pour la liste vide
+	- (n+2) mots [16, code, y1, ..., yn] pour une fermeture de code y et d'arguments
+		y1, ..., yn
+	- 2 mots [32, f] pour un glaçon où f est une valeur (une fermeture)
+	- 2 mots [64, v] pour un glaçon dégelé où v est une valeur (le résultat de
+		l'exécution de f)
+
+	Les fonctions prennent un argument (un unique puisque ce sont des clôtures)
+	en $a0 et renvoient leur valeur de retour en $v0.
+	Le résultat de la compilation d'une expression quelconque est aussi stocké en
+	$v0.
+
+	Les clôtures contiennent toutes les variables liées au point de création.
 
 Difficultés rencontrées :
-
-	La manière dont je gère les chaînes de caractères peut aussi probablement être
-	améliorée : les traiter comme des listes implique que le type const dépende du
-	type expr, ce qui nuit à la clarté et à la logique du code.
 
 	J'ai résolu le conflit shift/reduce lié à la présence possible d'un ';' à la
 	fin des do et def en modifiant légèrement la grammaire, en considérant une
 	liste de t séparés par des ';', avec éventuellement un ';' final, comme
 	(t ;) t?.
+
+	J'ai mis beaucoup de temps à comprendre la règle de typage pour les let afin
+	de gérer le cas des fonctions mutuellement récursives.
+
+	La production de code m'a pris énormément de temps (bien plus que ce que
+	je pensais au vu de l'écriture du reste du compilateur), bien que j'aie
+	pris le temps de bien définir toutes mes conventions.
+
+	Je ne gère pas le fait que les effets de bords ne sont pas répétés dans
+	l'évaluation d'un glaçon de type IO (), avec un code comme : 
+
+	main = let x = putChar 'a' in do { x; x }
+
+	Éléments non réalisés pour l'instant :
+		- production de code pour let, do, if-then-else, case, binop
+		- gestion des primitives div, rem, error

@@ -20,9 +20,9 @@ type pident = {
 
 
 type pconst = 
-    | PCbool of bool
     | PCint of int
     | PCchar of char
+    | PCbool of bool
     | PCstring of pexpr
 
 and pexpr = {
@@ -54,9 +54,9 @@ type pprogram = {pdefs : pdef list}
 (* Typing abstract syntax, sugar-free *)
 
 type typ =
-    | Tbool
-    | Tchar
     | Tint
+    | Tchar
+    | Tbool
     | Tio
     | Tlist of typ
     | Tarrow of typ * typ
@@ -67,9 +67,9 @@ and tvar = {id: int; mutable def: typ option}
 type ident = string
 
 type const =
-    | Cbool of bool
     | Cint of int
     | Cchar of char
+    | Cbool of bool
 
 type texpr = {
     tdesc: tdesc;
