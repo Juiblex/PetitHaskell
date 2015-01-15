@@ -15,7 +15,7 @@ let bin_to_str = function
     | Bgt -> "Bgt"
     | Bge -> "Bge"
     | Beq -> "Beq"
-    | Bneq -> "Bneq"
+    | Bne -> "Bne"
     | Band -> "Band"
     | Bor -> "Bor"
     | Bcons -> "Bcons"

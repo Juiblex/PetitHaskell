@@ -50,8 +50,7 @@ let rec conv_e arg bvars = function
 and conv_d arg bvars ldef = ldef.lname, conv_e arg bvars ldef.lbody
 
 let conv_p p =
-    let bvars = List.fold_left (fun s d -> Vset.add d.lname s) Vset.empty p.ldefs in
     let construct d = 
-        let name, expr = conv_d "" bvars d in CDlet (name, expr)
+        let name, expr = conv_d "" Vset.empty d in CDlet (name, expr)
     in
     {cdefs = (List.map construct p.ldefs)@(!fundefs)}

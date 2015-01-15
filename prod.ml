@@ -43,6 +43,7 @@ let putChar_c =
     push v0 ++
     jal "force" ++
     lw a0 areg (4, a0) ++
+    add a0 a0 oi 48 ++
     li v0 11 ++
     syscall ++
     pop v0 ++
@@ -81,13 +82,13 @@ let rec compile_e = function
             sw t0 areg (4, v0) (* the block address is already in $v0 *)
         | Cchar c ->
             alloc_heap 2 ++
-            li t0 1 ++
+            li t0 2 ++
             sw t0 areg (0, v0) ++
             li t0 (int_of_char c) ++
             sw t0 areg (4, v0)
         | Cbool b ->
             alloc_heap 2 ++
-            li t0 2 ++
+            li t0 1 ++
             sw t0 areg (0, v0) ++
             li t0 (if b then 1 else 0) ++
             sw t0 areg (4, v0)
@@ -129,10 +130,55 @@ let rec compile_e = function
             comment ("fin de clôture " ^ name)
         in pre ++ code ++ post
 
+    | VEbinop (Bcons, e1, e2) -> failwith "TODO"
+
+    | VEbinop ((Band | Bor), e1, e2) -> failwith "TODO"
+
+    | VEbinop(b, e1, e2) ->
+        let pre typ = 
+            compile_e e1 ++
+            push v0 ++
+            compile_e e2 ++
+            push v0 ++
+            alloc_heap 2 ++
+            pop t2 ++
+            pop t1 ++
+            li t0 typ ++
+            sw t0 areg (0, v0) ++
+            lw t1 areg (4, t1) ++
+            lw t2 areg (4, t2) 
+        in
+        let mid, typ = match b with
+            | Badd -> add t0 t1 oreg t2, 0
+            | Bsub -> sub t0 t1 oreg t2, 0
+            | Bmul -> mul t0 t1 oreg t2, 0
+            | Blt -> slt t0 t1 t2, 1
+            | Ble -> sle t0 t1 t2, 1
+            | Bgt -> sgt t0 t1 t2, 1
+            | Bge -> sge t0 t1 t2, 1
+            | Beq -> seq t0 t1 t2, 1
+            | Bne -> sne t0 t1 t2, 1
+            | _ -> failwith "never happens"
+        in
+        pre typ ++
+        mid ++
+        sw t0 areg (4, v0)
+
     | VEnil ->
         alloc_heap 1 ++
         li t0 8 ++
         sw t0 areg (0, v0)
+
+    | VEdo exprs ->
+        let force_e e code =
+            compile_e e ++
+            move a0 v0 ++
+            jal "force" ++
+            code
+        in
+        comment "début do" ++
+        List.fold_right force_e exprs nop ++
+        comment "fin do"
 
     | VEreturn -> nop
 

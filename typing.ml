@@ -157,7 +157,7 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         let t = begin match b with
             | Badd | Bsub | Bmul -> unify_p te1.typ Tint e1.pos;
                 unify_p te2.typ Tint e2.pos; Tint
-            | Blt | Ble | Bgt | Bge | Beq | Bneq -> unify_p te1.typ Tint e1.pos;
+            | Blt | Ble | Bgt | Bge | Beq | Bne -> unify_p te1.typ Tint e1.pos;
                 unify_p te2.typ Tint e2.pos; Tbool
             | Band | Bor -> unify_p te1.typ Tbool e1.pos;
                 unify_p te2.typ Tbool e2.pos; Tbool
@@ -234,7 +234,7 @@ and w_pdef env pdefs =
 let type_p prog =
     let e = add "div" (Tarrow (Tint, Tarrow (Tint, Tint))) empty in
     let e = add "rem" (Tarrow (Tint, Tarrow (Tint, Tint))) e in
-    let e = add "putChar" (Tarrow (Tchar, Tio)) e in
+    let e = add_gen "putChar" (Tarrow (Tvar (Var.create ()), Tio)) e in
     let e = add_gen "error" (Tarrow (Tlist Tchar, Tvar (Var.create ()))) e in
     List.iter (fun prim -> let f d = (d.pname.pid = prim) in
         if (List.exists f prog.pdefs)

@@ -1,6 +1,6 @@
 type binop =
     | Badd | Bsub | Bmul 
-    | Blt | Ble | Bgt | Bge | Beq | Bneq
+    | Blt | Ble | Bgt | Bge | Beq | Bne
     | Band | Bor
     | Bcons
     
