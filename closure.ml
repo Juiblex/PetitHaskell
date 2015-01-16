@@ -2,7 +2,7 @@ open Ast
 
 module Vset = Set.Make(String)
 
-module Fvar = struct
+module Clos = struct
     type t = string
     let create = let r = ref 0 in fun () -> incr r; Printf.sprintf "clos%d" !r
 end
@@ -19,7 +19,7 @@ let rec conv_e arg bvars = function
     | LEapp (e1, e2) -> CEapp (conv_e arg bvars e1, conv_e arg bvars e2)
 
     | LEabs (x, e) ->
-        let name = Fvar.create () in
+        let name = Clos.create () in
         let args = set_to_list bvars in
         let args = List.filter (fun s -> s <> "_") args in
         fundefs := (CDletfun (name, args, conv_e x (Vset.add x bvars) e))::(!fundefs);

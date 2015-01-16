@@ -99,6 +99,7 @@ let bgtz x (z : label) = ins "bgtz %s, %s" x z
 let blez x (z : label) = ins "blez %s, %s" x z
 let bltz x (z : label) = ins "bltz %s, %s" x z
 
+let j (z : label) = ins "j %s" z
 let jr a = ins "jr %s" a
 let jal (z : label) = ins "jal %s" z
 let jalr (z : register) = ins "jalr %s" z

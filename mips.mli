@@ -198,6 +198,9 @@ val blez : register ->  label -> text
 val bltz : register ->  label -> text
 (** [bopz ra rb label] branche vers le label [label] si [ra op 0] *)
 
+val j : label -> text
+(* [j l] Continue l'exécution à l'adresse spécifiée par le label [l].
+ *)
 
 val jr : register -> text
 (** [jr r] Continue l'exécution à l'adresse spécifiée dans le registre

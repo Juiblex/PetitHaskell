@@ -1,9 +1,19 @@
 open Ast
 open Mips
 
+module Label = struct
+    type t = string
+    let create = let r = ref 0 in fun () -> incr r; Printf.sprintf "_lab%d" !r
+end
+
 let pushn n = sub sp sp oi n
 
-let alloc_heap n = li v0 9 ++ li a0 (4*n) ++ syscall (* allocates n *words* *)
+let alloc_heap n =  (* allocates n *words* *)
+    push a0 ++
+    li v0 9 ++
+    li a0 (4*n) ++
+    syscall ++
+    pop a0
 
 let force = 
     label "force" ++
@@ -52,13 +62,25 @@ let putChar_c =
     jr ra
 
 let putChar_v =
+    comment "début de putChar" ++
     alloc_heap 2 ++
     li t0 16 ++
     sw t0 areg (0, v0) ++
     la t0 alab "_putChar" ++
     sw t0 areg (4, v0) ++
     la t0 alab "putChar" ++
-    sw v0 areg (0, t0)
+    sw v0 areg (0, t0) ++
+    comment "fin de putChar"
+
+let alloc_prim typ v = (* for ints, bools and chars *)
+    alloc_heap 2 ++
+    li t0 typ ++
+    sw t0 areg (0, v0) ++
+    if v = 0 then
+        sw zero areg (4, v0)
+    else
+        li t0 v ++
+        sw t0 areg (4, v0)
 
 let rec compile_e = function
     | VEvar v -> begin match v with
@@ -75,27 +97,16 @@ let rec compile_e = function
 
     | VEconst c -> begin match c with
         | Cint n ->
-            alloc_heap 2 ++
-            li t0 0 ++
-            sw t0 areg (0, v0) ++
-            li t0 n ++
-            sw t0 areg (4, v0) (* the block address is already in $v0 *)
+            alloc_prim 0 n
         | Cchar c ->
-            alloc_heap 2 ++
-            li t0 2 ++
-            sw t0 areg (0, v0) ++
-            li t0 (int_of_char c) ++
-            sw t0 areg (4, v0)
+            alloc_prim 1 (int_of_char c)
         | Cbool b ->
-            alloc_heap 2 ++
-            li t0 1 ++
-            sw t0 areg (0, v0) ++
-            li t0 (if b then 1 else 0) ++
-            sw t0 areg (4, v0)
+            alloc_prim 2 (if b then 1 else 0)
         end
 
     | VEapp (e1, e2) ->
         compile_e e1 ++
+        push a0 ++
         move a0 v0 ++
         jal "force" ++
         push a0 ++
@@ -104,7 +115,8 @@ let rec compile_e = function
         lw t1 areg (4, t0) ++ (* address of the code to be executed *)
         move a0 v0 ++ (* argument *)
         move a1 t0 ++ (* bound variables *)
-        jalr t1
+        jalr t1 ++
+        pop a0
 
     | VEclos (name, vars) ->
         let pre =
@@ -132,17 +144,43 @@ let rec compile_e = function
 
     | VEbinop (Bcons, e1, e2) -> failwith "TODO"
 
-    | VEbinop ((Band | Bor), e1, e2) -> failwith "TODO"
+    | VEbinop (Band, e1, e2) ->
+        let fail = Label.create () in
+        let ret = Label.create () in
+        compile_f e1 t0 ++
+        lw t0 areg (4, t0) ++
+        beqz t0 fail ++
+        compile_f e2 t0 ++
+        lw t0 areg (4, t0) ++
+        beqz t0 fail ++
+        alloc_prim 1 1 ++
+        j ret ++
+        label fail ++
+        alloc_prim 1 0 ++
+        label ret
+
+    | VEbinop (Bor, e1, e2) ->
+        let succ = Label.create () in
+        let ret = Label.create () in
+        compile_f e1 t0 ++
+        lw t0 areg (4, t0) ++
+        bnez t0 succ ++
+        compile_f e2 t0 ++
+        lw t0 areg (4, t0) ++
+        bnez t0 succ ++
+        alloc_prim 1 0 ++
+        j ret ++
+        label succ ++
+        alloc_prim 1 1 ++
+        label ret
 
     | VEbinop(b, e1, e2) ->
         let pre typ = 
-            compile_e e1 ++
-            push v0 ++
-            compile_e e2 ++
-            push v0 ++
-            alloc_heap 2 ++
-            pop t2 ++
+            compile_f e1 t0 ++
+            push t0 ++
+            compile_f e2 t2 ++
             pop t1 ++
+            alloc_heap 2 ++
             li t0 typ ++
             sw t0 areg (0, v0) ++
             lw t1 areg (4, t1) ++
@@ -169,11 +207,25 @@ let rec compile_e = function
         li t0 8 ++
         sw t0 areg (0, v0)
 
+    | VEcond (e1, e2, e3) ->
+        let fail = Label.create () in
+        let ret = Label.create () in
+        compile_f e1 t0 ++
+        lw t0 areg (4, t0) ++
+        beqz t0 fail ++
+        compile_e e2 ++
+        j ret ++
+        label fail ++
+        compile_e e3 ++
+        label ret   
+
+    | VElet (foo, bar) -> failwith "TODO"
+
+    | VEcase (a, b, c, d, e) -> failwith "TODO"
+
     | VEdo exprs ->
         let force_e e code =
-            compile_e e ++
-            move a0 v0 ++
-            jal "force" ++
+            compile_f e t0 ++
             code
         in
         comment "début do" ++
@@ -189,11 +241,17 @@ let rec compile_e = function
         alloc_heap 2 ++
         li t0 32 ++
         sw t0 areg (0, v0) ++
-        pop a0 ++
-        sw a0 areg (4, v0) ++
+        pop t0 ++
+        sw t0 areg (4, v0) ++
         comment "fin glaçon"
 
-    | _ -> failwith "TODO"
+and compile_f e r = (* puts the forced result of e in r *)
+    compile_e e ++
+    push a0 ++
+    move a0 v0 ++
+    jal "force" ++
+    move r a0 ++
+    pop a0
 
 let compile_d (codevars, codefuns, globs) = function
     | VDlet (x, e, fpmax) ->
