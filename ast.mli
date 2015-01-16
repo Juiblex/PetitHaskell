@@ -121,12 +121,8 @@ type lprogram = {ldefs: ldef list}
 
 (* Closure-converted abstract syntax *)
 
-type cvar =
-    | CVvar of ident
-    | CVarg
-
 type cexpr =
-    | CEvar of cvar
+    | CEvar of ident
     | CEconst of const
     | CEapp of cexpr * cexpr
     | CEclos of ident * ident list
@@ -141,7 +137,7 @@ type cexpr =
     
 and cdef =
     | CDlet of ident * cexpr
-    | CDletfun of ident * ident list * cexpr (* name and arguments *)
+    | CDletfun of ident * ident * ident list * cexpr (* f x [env] = e *)
 
 
 type cprogram = {cdefs: cdef list}

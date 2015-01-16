@@ -18,12 +18,12 @@ let alloc_heap n =  (* allocates n *words* *)
 let force = 
     label "force" ++
     lw t0 areg (0, a0) ++
-    li t1 16 ++
+    li t1 0x10 ++
     bgt t0 t1 "force_1" ++
     jr ra ++
 
     label "force_1" ++
-    li t1 32 ++
+    li t1 0x20 ++
     beq t0 t1 "force_2" ++
     lw a0 areg (4, a0) ++
     jr ra ++
@@ -31,6 +31,7 @@ let force =
     label "force_2" ++
     push ra ++
     push a0 ++
+    push a1 ++
     lw a0 areg (4, a0) ++ (* $a0 : closure address *)
     move a1 a0 ++
     lw a0 areg (4, a0) ++ (* $a0 : closure code address *)
@@ -38,8 +39,9 @@ let force =
     move a0 v0 ++
     jal "force" ++
     move t0 a0 ++
+    pop a1 ++
     pop a0 ++
-    li t1 64 ++
+    li t1 0x40 ++
     sw t1 areg (0, a0) ++
     sw t0 areg (4, a0) ++
     move a0 t0 ++ (* $a0 : value address *)
@@ -64,7 +66,7 @@ let putChar_c =
 let putChar_v =
     comment "début de putChar" ++
     alloc_heap 2 ++
-    li t0 16 ++
+    li t0 0x10 ++
     sw t0 areg (0, v0) ++
     la t0 alab "_putChar" ++
     sw t0 areg (4, v0) ++
@@ -105,24 +107,25 @@ let rec compile_e = function
         end
 
     | VEapp (e1, e2) ->
-        compile_e e1 ++
+        comment "début app" ++
+        compile_f e1 t0 ++
         push a0 ++
-        move a0 v0 ++
-        jal "force" ++
-        push a0 ++
+        push a1 ++
+        push t0 ++
         compile_e e2 ++
-        pop t0 ++
-        lw t1 areg (4, t0) ++ (* address of the code to be executed *)
-        move a0 v0 ++ (* argument *)
-        move a1 t0 ++ (* bound variables *)
-        jalr t1 ++
-        pop a0
+        move a0 v0 ++
+        pop a1 ++ (* closure address *)
+        lw t0 areg (4, a1) ++
+        jalr t0 ++
+        pop a1 ++
+        pop a0 ++
+        comment "fin app"
 
     | VEclos (name, vars) ->
         let pre =
             comment ("début de clôture " ^ name) ++
             alloc_heap (2 + List.length vars) ++
-            li t0 16 ++
+            li t0 0x10 ++
             sw t0 areg (0, v0) ++
             la t0 alab name ++
             sw t0 areg (4, v0)
@@ -147,6 +150,7 @@ let rec compile_e = function
     | VEbinop (Band, e1, e2) ->
         let fail = Label.create () in
         let ret = Label.create () in
+        comment "début and" ++
         compile_f e1 t0 ++
         lw t0 areg (4, t0) ++
         beqz t0 fail ++
@@ -157,11 +161,13 @@ let rec compile_e = function
         j ret ++
         label fail ++
         alloc_prim 1 0 ++
-        label ret
+        label ret ++
+        comment "fin and"
 
     | VEbinop (Bor, e1, e2) ->
         let succ = Label.create () in
         let ret = Label.create () in
+        comment "début or" ++
         compile_f e1 t0 ++
         lw t0 areg (4, t0) ++
         bnez t0 succ ++
@@ -172,10 +178,12 @@ let rec compile_e = function
         j ret ++
         label succ ++
         alloc_prim 1 1 ++
-        label ret
+        label ret ++
+        comment "fin or"
 
     | VEbinop(b, e1, e2) ->
         let pre typ = 
+            comment "début binop" ++
             compile_f e1 t0 ++
             push t0 ++
             compile_f e2 t2 ++
@@ -200,7 +208,8 @@ let rec compile_e = function
         in
         pre typ ++
         mid ++
-        sw t0 areg (4, v0)
+        sw t0 areg (4, v0) ++
+        comment "fin binop"
 
     | VEnil ->
         alloc_heap 1 ++
@@ -239,7 +248,7 @@ let rec compile_e = function
         compile_e e ++
         push v0 ++
         alloc_heap 2 ++
-        li t0 32 ++
+        li t0 0x20 ++
         sw t0 areg (0, v0) ++
         pop t0 ++
         sw t0 areg (4, v0) ++

@@ -4,7 +4,7 @@ module Vset = Set.Make(String)
 
 module Clos = struct
     type t = string
-    let create = let r = ref 0 in fun () -> incr r; Printf.sprintf "clos%d" !r
+    let create = let r = ref 0 in fun () -> incr r; Printf.sprintf "_clos%d" !r
 end
 
 let fundefs = ref []
@@ -12,7 +12,7 @@ let fundefs = ref []
 let set_to_list s = Vset.fold (fun e l -> e::l) s []
 
 let rec conv_e arg bvars = function
-    | LEvar x -> if x = arg then CEvar CVarg else CEvar (CVvar x)
+    | LEvar x -> CEvar x
 
     | LEconst c -> CEconst c
 
@@ -22,7 +22,8 @@ let rec conv_e arg bvars = function
         let name = Clos.create () in
         let args = set_to_list bvars in
         let args = List.filter (fun s -> s <> "_") args in
-        fundefs := (CDletfun (name, args, conv_e x (Vset.add x bvars) e))::(!fundefs);
+        fundefs := (CDletfun (name, x, args,
+            conv_e x (Vset.add x bvars) e))::(!fundefs);
         CEclos (name, args)
 
     | LEbinop (b, e1, e2) -> CEbinop (b, conv_e arg bvars e1, conv_e arg bvars e2)
