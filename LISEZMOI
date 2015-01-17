@@ -12,6 +12,8 @@ Choix techniques :
 	- 2 mots [32, f] pour un glaçon où f est une valeur (une fermeture)
 	- 2 mots [64, v] pour un glaçon dégelé où v est une valeur (le résultat de
 		l'exécution de f)
+	- 2 mots [128, v] pour un pointeur vers une valeur v (utilisé pour compiler
+		les let récursifs )
 
 	Les fonctions prennent un argument (un unique puisque ce sont des clôtures)
 	en $a0 et renvoient leur valeur de retour en $v0.
@@ -28,17 +30,16 @@ Difficultés rencontrées :
 	(t ;) t?.
 
 	J'ai mis beaucoup de temps à comprendre la règle de typage pour les let afin
-	de gérer le cas des fonctions mutuellement récursives.
+	de gérer le cas des fonctions mutuellement récursives. Mon typage n'est
+	apparemment pas assez polymorphe sur des tests comme church2.hs.
 
 	La production de code m'a pris énormément de temps (bien plus que ce que
 	je pensais au vu de l'écriture du reste du compilateur), bien que j'aie
-	pris le temps de bien définir toutes mes conventions.
+	pris le temps de bien définir toutes mes conventions : réfléchir en MIPS,
+	c'est compliqué.
 
 	Je ne gère pas le fait que les effets de bords ne sont pas répétés dans
 	l'évaluation d'un glaçon de type IO (), avec un code comme : 
 
 	main = let x = putChar 'a' in do { x; x }
 
-	Éléments non réalisés pour l'instant :
-		- production de code pour let, do, if-then-else, case, binop
-		- gestion des primitives div, rem, error

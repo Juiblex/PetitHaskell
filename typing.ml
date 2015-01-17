@@ -35,6 +35,15 @@ type env = {bindings: schema Smap.t; fvars: Vset.t}
 
 let empty = {bindings = Smap.empty; fvars = Vset.empty}
 
+let rec head = function
+    | Tvar {def = Some t} -> head t
+    | t -> t
+
+let rec canon t = match head t with
+    | Tlist u -> Tlist (canon u)
+    | Tarrow (t1, t2) -> Tarrow(canon t1, canon t2)
+    | u -> u
+
 let check_multiple pids =
     let add_u m d =
         if Smap.mem d.pid m then
@@ -45,7 +54,7 @@ let check_multiple pids =
     in ignore (List.fold_left add_u Smap.empty pids)
 
 let check_polymorphism defs = 
-    let rec has_fvars = function
+    let rec has_fvars t = match canon t with
         | Tvar _ -> true
         | Tlist t -> has_fvars t
         | Tarrow (t1, t2) -> has_fvars t1 || has_fvars t2
@@ -53,15 +62,6 @@ let check_polymorphism defs =
     in
     List.iter (fun (pd, td) -> if has_fvars td.tbody.typ then
         raise (Toplevel_polymorphism (pd.pname, td.tbody.typ))) defs
-
-let rec head = function
-    | Tvar {def = Some t} -> head t
-    | t -> t
-
-let rec canon t = match head t with
-    | Tlist u -> Tlist (canon u)
-    | Tarrow (t1, t2) -> Tarrow(canon t1, canon t2)
-    | u -> u
 
 let unification_error t1 t2 = raise (Unification_failure (canon t1, canon t2))
 

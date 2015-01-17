@@ -15,6 +15,11 @@ let alloc_heap n =  (* allocates n *words* *)
     syscall ++
     pop a0
 
+let exit_fail =
+    li a0 1 ++
+    li v0 17 ++
+    syscall
+
 let force_c = 
     label "force" ++
     lw t0 areg (0, a0) ++
@@ -26,6 +31,8 @@ let force_c =
     li t1 32 ++
     beq t0 t1 "force_2" ++
     lw a0 areg (4, a0) ++
+    li t1 128 ++
+    beq t0 t1 "force" ++
     jr ra ++
 
     label "force_2" ++
@@ -62,20 +69,48 @@ let putChar_c =
     pop ra ++
     jr ra
 
-let putChar_v =
-    comment "début de putChar" ++
-    alloc_heap 2 ++
+let arith_error = 
+    label "arith_error" ++
+    asciiz "Arithmetic error.\n"
+
+let prim_c prim = (* div and rem *)
+    label ("_" ^ prim) ++
+    alloc_heap 3 ++
     li t0 16 ++
     sw t0 areg (0, v0) ++
-    la t0 alab "_putChar" ++
+    la t0 alab ("_" ^ prim ^ "_clos") ++
     sw t0 areg (4, v0) ++
-    la t0 alab "putChar" ++
-    sw v0 areg (0, t0) ++
-    comment "fin de putChar"
+    sw a0 areg (8, v0) ++
+    jr ra
 
-let error_m =
-    label "error_m" ++
-    asciiz "error: "
+let prim_clos_c prim =
+    let ok = Label.create () in
+    let op = if prim = "div" then div else rem in
+    label ("_" ^ prim ^ "_clos") ++
+    push ra ++
+    push a0 ++
+    jal "force" ++
+    lw t0 areg (4, a0) ++
+    bnez t0 ok ++
+
+    la a0 alab "arith_error" ++
+    li v0 4 ++
+    syscall ++
+    exit_fail ++
+
+    label ok ++
+    push t0 ++
+    lw a0 areg (8, a1) ++
+    jal "force" ++
+    pop t0 ++
+    lw t1 areg (4, a0) ++
+    op t0 t1 oreg t0 ++
+    alloc_heap 2 ++
+    sw zero areg (0, v0) ++
+    sw t0 areg (4, v0) ++
+    pop a0 ++
+    pop ra ++
+    jr ra
 
 let error_c =
     let loop = Label.create () in
@@ -98,20 +133,22 @@ let error_c =
     pop a0 ++
     j loop ++
     label ret ++
-    li a0 1 ++
-    li v0 17 ++
-    syscall
+    exit_fail
 
-let error_v =
-    comment "début de error" ++
+let code_prim prim =
+    comment ("début de " ^ prim) ++
     alloc_heap 2 ++
     li t0 16 ++
     sw t0 areg (0, v0) ++
-    la t0 alab "_error" ++
+    la t0 alab ("_" ^ prim) ++
     sw t0 areg (4, v0) ++
-    la t0 alab "error" ++
+    la t0 alab prim ++
     sw v0 areg (0, t0) ++
-    comment "fin de error"
+    comment ("fin de " ^ prim)
+
+let error_m =
+    label "error_m" ++
+    asciiz "error: "
 
 let alloc_prim typ v = (* for ints, bools and chars *)
     alloc_heap 2 ++
@@ -281,18 +318,19 @@ let rec compile_e = function
     | VElet (defs, e) ->
         let compile_var (x, e) code =
             alloc_heap 2 ++
-            li t0 64 ++
-            sw t0 areg (0, v0) ++
             sw v0 areg (x, fp) ++
+            li t0 128 ++
+            sw t0 areg (0, v0) ++
             push v0 ++
             compile_e e ++
-            move t0 v0 ++
-            pop v0 ++
-            sw t0 areg (4, v0) ++
+            pop t0 ++
+            sw v0 areg (4, t0) ++
             code
         in
+        comment "début let" ++
         List.fold_right compile_var defs nop ++
-        compile_e e
+        compile_e e ++
+        comment "fin let"
 
     | VEcase (l, e1, x, xs, e2) ->
         let not_empty = Label.create () in
@@ -329,12 +367,13 @@ let rec compile_e = function
 
     | VEthunk e ->
         comment "début glaçon" ++
-        compile_e e ++
-        push v0 ++
         alloc_heap 2 ++
         li t0 32 ++
         sw t0 areg (0, v0) ++
-        pop t0 ++
+        push v0 ++
+        compile_e e ++
+        move t0 v0 ++
+        pop v0 ++
         sw t0 areg (4, v0) ++
         comment "fin glaçon"
 
@@ -375,11 +414,14 @@ let compile_d (codevars, codefuns, globs) = function
         in codevars, codefuns ++ codef, globs
 
 let compile_p {vdefs = vdefs} =
-    let codevars, codefuns, globs = List.fold_left compile_d (nop, nop, nop) vdefs in
+    let codevars, codefuns, globs =
+        List.fold_left compile_d (nop, nop, nop) vdefs in
     {text =
         codevars ++
-        putChar_v ++
-        error_v ++
+        code_prim "putChar" ++
+        code_prim "error" ++
+        code_prim "div" ++
+        code_prim "rem" ++
         la t0 alab "main" ++
         lw a0 areg (0, t0) ++
         jal "force" ++ 
@@ -387,13 +429,22 @@ let compile_p {vdefs = vdefs} =
         syscall ++
         codefuns ++
         putChar_c ++
+        prim_c "div" ++
+        prim_c "rem" ++
+        prim_clos_c "div" ++
+        prim_clos_c "rem" ++
         error_c ++
-        force_c;
+        force_c; 
     data =
         globs ++
         label "putChar" ++
         dword [0] ++
         label "error" ++
         dword [0] ++
-        error_m
+        label "div" ++
+        dword [0] ++
+        label "rem" ++
+        dword [0] ++
+        error_m ++
+        arith_error
         }
