@@ -278,7 +278,21 @@ let rec compile_e = function
         compile_e e3 ++
         label ret   
 
-    | VElet (foo, bar) -> failwith "TODO"
+    | VElet (defs, e) ->
+        let compile_var (x, e) code =
+            alloc_heap 2 ++
+            li t0 64 ++
+            sw t0 areg (0, v0) ++
+            sw v0 areg (x, fp) ++
+            push v0 ++
+            compile_e e ++
+            move t0 v0 ++
+            pop v0 ++
+            sw t0 areg (4, v0) ++
+            code
+        in
+        List.fold_right compile_var defs nop ++
+        compile_e e
 
     | VEcase (l, e1, x, xs, e2) ->
         let not_empty = Label.create () in

@@ -115,4 +115,9 @@ let () =
             loc_p pid.pos;
             Printf.printf "Redefined primitive %s.\n" pid.pid;
             exit 1
+        | Typing.Toplevel_polymorphism ({pid = name; pos = p}, t) ->
+            loc_p p;
+            Printf.printf "%s has polymorphic type " name; Print.trec t;
+            Printf.printf "\n";
+            exit 1;
 

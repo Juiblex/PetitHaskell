@@ -14,6 +14,8 @@ exception Wrong_main_type of typ
 
 exception Redefined_primitive of pident
 
+exception Toplevel_polymorphism of pident * typ
+
 module Var = struct
     type t = tvar
     let compare v1 v2 = Pervasives.compare v1 v2
@@ -41,6 +43,16 @@ let check_multiple pids =
         else
             Smap.add d.pid d m
     in ignore (List.fold_left add_u Smap.empty pids)
+
+let check_polymorphism defs = 
+    let rec has_fvars = function
+        | Tvar _ -> true
+        | Tlist t -> has_fvars t
+        | Tarrow (t1, t2) -> has_fvars t1 || has_fvars t2
+        | _ -> false
+    in
+    List.iter (fun (pd, td) -> if has_fvars td.tbody.typ then
+        raise (Toplevel_polymorphism (pd.pname, td.tbody.typ))) defs
 
 let rec head = function
     | Tvar {def = Some t} -> head t
@@ -234,13 +246,14 @@ and w_pdef env pdefs =
 let type_p prog =
     let e = add "div" (Tarrow (Tint, Tarrow (Tint, Tint))) empty in
     let e = add "rem" (Tarrow (Tint, Tarrow (Tint, Tint))) e in
-    let e = add_gen "putChar" (Tarrow (Tvar (Var.create ()), Tio)) e in
+    let e = add "putChar" (Tarrow (Tchar, Tio)) e in
     let e = add_gen "error" (Tarrow (Tlist Tchar, Tvar (Var.create ()))) e in
     List.iter (fun prim -> let f d = (d.pname.pid = prim) in
         if (List.exists f prog.pdefs)
         then raise (Redefined_primitive (List.find f prog.pdefs).pname))
         ["div"; "rem"; "putChar"; "error"];
-    let env, tdefs = w_pdef e prog.pdefs in 
+    let _, tdefs = w_pdef e prog.pdefs in 
+    check_polymorphism (List.combine prog.pdefs tdefs);
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
         begin
