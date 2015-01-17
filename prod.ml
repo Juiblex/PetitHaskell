@@ -15,7 +15,7 @@ let alloc_heap n =  (* allocates n *words* *)
     syscall ++
     pop a0
 
-let force = 
+let force_c = 
     label "force" ++
     lw t0 areg (0, a0) ++
     li t1 16 ++
@@ -72,6 +72,46 @@ let putChar_v =
     la t0 alab "putChar" ++
     sw v0 areg (0, t0) ++
     comment "fin de putChar"
+
+let error_m =
+    label "error_m" ++
+    asciiz "error: "
+
+let error_c =
+    let loop = Label.create () in
+    let ret = Label.create () in
+    label "_error" ++
+    move s0 a0 ++
+    la a0 alab "error_m" ++
+    li v0 4 ++
+    syscall ++
+    move a0 s0 ++
+    label loop ++
+    jal "force" ++
+    lw t0 areg (0, a0) ++
+    li t1 8 ++
+    beq t0 t1 ret ++
+    lw t0 areg (8, a0) ++
+    push t0 ++
+    lw a0 areg (4, a0) ++
+    jal "_putChar" ++
+    pop a0 ++
+    j loop ++
+    label ret ++
+    li a0 1 ++
+    li v0 17 ++
+    syscall
+
+let error_v =
+    comment "début de error" ++
+    alloc_heap 2 ++
+    li t0 16 ++
+    sw t0 areg (0, v0) ++
+    la t0 alab "_error" ++
+    sw t0 areg (4, v0) ++
+    la t0 alab "error" ++
+    sw v0 areg (0, t0) ++
+    comment "fin de error"
 
 let alloc_prim typ v = (* for ints, bools and chars *)
     alloc_heap 2 ++
@@ -325,6 +365,7 @@ let compile_p {vdefs = vdefs} =
     {text =
         codevars ++
         putChar_v ++
+        error_v ++
         la t0 alab "main" ++
         lw a0 areg (0, t0) ++
         jal "force" ++ 
@@ -332,9 +373,13 @@ let compile_p {vdefs = vdefs} =
         syscall ++
         codefuns ++
         putChar_c ++
-        force;
+        error_c ++
+        force_c;
     data =
         globs ++
         label "putChar" ++
-        dword [0]
+        dword [0] ++
+        label "error" ++
+        dword [0] ++
+        error_m
         }
