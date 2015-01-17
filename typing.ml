@@ -54,7 +54,7 @@ let check_multiple pids =
     in ignore (List.fold_left add_u Smap.empty pids)
 
 let check_polymorphism defs = 
-    let rec has_fvars t = match canon t with
+    let rec has_fvars t = match head t with
         | Tvar _ -> true
         | Tlist t -> has_fvars t
         | Tarrow (t1, t2) -> has_fvars t1 || has_fvars t2
@@ -231,12 +231,12 @@ and w_pdef env pdefs =
     check_multiple (List.map (fun d -> d.pname) pdefs);
     let add_p e d = add d.pname.pid (Tvar (Var.create ())) e in
     let add_t e d = add_gen d.tname d.tbody.typ e in
-    let env = List.fold_left add_p env pdefs in
+    let env' = List.fold_left add_p env pdefs in
     let tdefs_p = List.map (fun {pname = n; pbody = b} ->
-        {tname = n.pid; tbody = w env b}, n.pos) pdefs in
+        {tname = n.pid; tbody = w env' b}, n.pos) pdefs in
     List.iter (fun (d, pos) ->
             unify_p d.tbody.typ
-            (w env {pdesc = PEvar {pid = d.tname; pos = pos}; pos = pos}).typ
+            (w env' {pdesc = PEvar {pid = d.tname; pos = pos}; pos = pos}).typ
             pos)
         tdefs_p;
     let tdefs = List.map (fun (x, y) -> x) tdefs_p in
@@ -253,12 +253,12 @@ let type_p prog =
         then raise (Redefined_primitive (List.find f prog.pdefs).pname))
         ["div"; "rem"; "putChar"; "error"];
     let _, tdefs = w_pdef e prog.pdefs in 
-    check_polymorphism (List.combine prog.pdefs tdefs);
     try
         let m = List.find (fun d -> d.tname = "main") tdefs in
         begin
             try unify m.tbody.typ Tio with Unification_failure (t, _) ->
             raise (Wrong_main_type t)
         end;
+(*      check_polymorphism (List.combine prog.pdefs tdefs); *)
         {tdefs = tdefs}
     with Not_found -> raise No_main

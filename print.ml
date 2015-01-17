@@ -87,11 +87,11 @@ let rec trec = function
     | Tint -> print_string "Integer"
     | Tio -> print_string "IO ()"
     | Tlist t -> print_char '['; trec t; print_char ']'
-    | Tarrow (t1, t2) -> trec t1;
-        print_string " -> "; print_char '('; trec t2; print_char ')'
+    | Tarrow (t1, t2) -> print_char '('; trec t1; print_char ')';
+        print_string " -> "; trec t2
     | Tvar tv -> 
         begin match tv.def with
-            | None -> Printf.printf "Tvar (%d; None)" tv.id
+            | None -> Printf.printf "Tvar %d" tv.id
             | Some t -> trec t
         end
 

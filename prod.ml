@@ -114,15 +114,21 @@ let prim_clos_c prim =
 
 let error_c =
     let loop = Label.create () in
+    let cond = Label.create () in
     let ret = Label.create () in
     label "_error" ++
+
+    label loop ++
+    jal "force" ++
+    bnez s1 cond ++
     move s0 a0 ++
     la a0 alab "error_m" ++
     li v0 4 ++
     syscall ++
     move a0 s0 ++
-    label loop ++
-    jal "force" ++
+    li s1 1 ++
+
+    label cond ++
     lw t0 areg (0, a0) ++
     li t1 8 ++
     beq t0 t1 ret ++
@@ -316,19 +322,22 @@ let rec compile_e = function
         label ret   
 
     | VElet (defs, e) ->
-        let compile_var (x, e) code =
-            alloc_heap 2 ++
-            sw v0 areg (x, fp) ++
-            li t0 128 ++
-            sw t0 areg (0, v0) ++
-            push v0 ++
-            compile_e e ++
-            pop t0 ++
-            sw v0 areg (4, t0) ++
-            code
+        let rec compile_vars = function
+            | [] -> nop
+            | (x, e)::t ->
+                alloc_heap 2 ++
+                sw v0 areg (x, fp) ++
+                compile_vars t ++
+                lw v0 areg (x, fp) ++
+                li t0 128 ++
+                sw t0 areg (0, v0) ++
+                push v0 ++
+                compile_e e ++
+                pop t0 ++
+                sw v0 areg (4, t0)
         in
         comment "début let" ++
-        List.fold_right compile_var defs nop ++
+        compile_vars defs ++
         compile_e e ++
         comment "fin let"
 

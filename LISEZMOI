@@ -33,6 +33,11 @@ Difficultés rencontrées :
 	de gérer le cas des fonctions mutuellement récursives. Mon typage n'est
 	apparemment pas assez polymorphe sur des tests comme church2.hs.
 
+	Je n'ai pas dû bien comprendre la contrainte sur le fait qu'il n'y ait pas
+	de variables polymorphes au plus haut niveau : par exemple, le test 
+	hindley-milner contient une fonction polymorphe. J'ai écrit le code mais
+	l'ai laissé commenté.
+
 	La production de code m'a pris énormément de temps (bien plus que ce que
 	je pensais au vu de l'écriture du reste du compilateur), bien que j'aie
 	pris le temps de bien définir toutes mes conventions : réfléchir en MIPS,
@@ -43,3 +48,4 @@ Difficultés rencontrées :
 
 	main = let x = putChar 'a' in do { x; x }
 
+	Je ne passe pas le test queue1.hs pour une raison qui m'échappe.
