@@ -18,12 +18,12 @@ let alloc_heap n =  (* allocates n *words* *)
 let force = 
     label "force" ++
     lw t0 areg (0, a0) ++
-    li t1 0x10 ++
+    li t1 16 ++
     bgt t0 t1 "force_1" ++
     jr ra ++
 
     label "force_1" ++
-    li t1 0x20 ++
+    li t1 32 ++
     beq t0 t1 "force_2" ++
     lw a0 areg (4, a0) ++
     jr ra ++
@@ -41,7 +41,7 @@ let force =
     move t0 a0 ++
     pop a1 ++
     pop a0 ++
-    li t1 0x40 ++
+    li t1 64 ++
     sw t1 areg (0, a0) ++
     sw t0 areg (4, a0) ++
     move a0 t0 ++ (* $a0 : value address *)
@@ -55,7 +55,6 @@ let putChar_c =
     push v0 ++
     jal "force" ++
     lw a0 areg (4, a0) ++
-    add a0 a0 oi 48 ++
     li v0 11 ++
     syscall ++
     pop v0 ++
@@ -66,7 +65,7 @@ let putChar_c =
 let putChar_v =
     comment "début de putChar" ++
     alloc_heap 2 ++
-    li t0 0x10 ++
+    li t0 16 ++
     sw t0 areg (0, v0) ++
     la t0 alab "_putChar" ++
     sw t0 areg (4, v0) ++
@@ -108,7 +107,7 @@ let rec compile_e = function
 
     | VEapp (e1, e2) ->
         comment "début app" ++
-        compile_f e1 t0 ++
+        comp_force e1 t0 ++
         push a0 ++
         push a1 ++
         push t0 ++
@@ -125,7 +124,7 @@ let rec compile_e = function
         let pre =
             comment ("début de clôture " ^ name) ++
             alloc_heap (2 + List.length vars) ++
-            li t0 0x10 ++
+            li t0 16 ++
             sw t0 areg (0, v0) ++
             la t0 alab name ++
             sw t0 areg (4, v0)
@@ -145,16 +144,27 @@ let rec compile_e = function
             comment ("fin de clôture " ^ name)
         in pre ++ code ++ post
 
-    | VEbinop (Bcons, e1, e2) -> failwith "TODO"
+    | VEbinop (Bcons, e1, e2) ->
+        compile_e e1 ++
+        push v0 ++
+        compile_e e2 ++
+        push v0 ++
+        alloc_heap 3 ++
+        li t0 4 ++
+        sw t0 areg (0, v0) ++
+        pop t0 ++
+        sw t0 areg (8, v0) ++
+        pop t0 ++
+        sw t0 areg (4, v0)
 
     | VEbinop (Band, e1, e2) ->
         let fail = Label.create () in
         let ret = Label.create () in
         comment "début and" ++
-        compile_f e1 t0 ++
+        comp_force e1 t0 ++
         lw t0 areg (4, t0) ++
         beqz t0 fail ++
-        compile_f e2 t0 ++
+        comp_force e2 t0 ++
         lw t0 areg (4, t0) ++
         beqz t0 fail ++
         alloc_prim 1 1 ++
@@ -168,10 +178,10 @@ let rec compile_e = function
         let succ = Label.create () in
         let ret = Label.create () in
         comment "début or" ++
-        compile_f e1 t0 ++
+        comp_force e1 t0 ++
         lw t0 areg (4, t0) ++
         bnez t0 succ ++
-        compile_f e2 t0 ++
+        comp_force e2 t0 ++
         lw t0 areg (4, t0) ++
         bnez t0 succ ++
         alloc_prim 1 0 ++
@@ -184,9 +194,9 @@ let rec compile_e = function
     | VEbinop(b, e1, e2) ->
         let pre typ = 
             comment "début binop" ++
-            compile_f e1 t0 ++
+            comp_force e1 t0 ++
             push t0 ++
-            compile_f e2 t2 ++
+            comp_force e2 t2 ++
             pop t1 ++
             alloc_heap 2 ++
             li t0 typ ++
@@ -219,7 +229,7 @@ let rec compile_e = function
     | VEcond (e1, e2, e3) ->
         let fail = Label.create () in
         let ret = Label.create () in
-        compile_f e1 t0 ++
+        comp_force e1 t0 ++
         lw t0 areg (4, t0) ++
         beqz t0 fail ++
         compile_e e2 ++
@@ -230,31 +240,51 @@ let rec compile_e = function
 
     | VElet (foo, bar) -> failwith "TODO"
 
-    | VEcase (a, b, c, d, e) -> failwith "TODO"
+    | VEcase (l, e1, x, xs, e2) ->
+        let not_empty = Label.create () in
+        let ret = Label.create () in
+        comment "début case" ++
+        comp_force l v0 ++
+        lw t0 areg (0, v0) ++
+        li t1 4 ++
+        beq t0 t1 not_empty ++
+        compile_e e1 ++
+        j ret ++
+        label not_empty ++
+        lw t0 areg (4, v0) ++
+        sw t0 areg (x, fp) ++
+        lw t0 areg (8, v0) ++
+        sw t0 areg (xs, fp) ++
+        compile_e e2 ++
+        label ret ++
+        comment "fin case"
 
     | VEdo exprs ->
         let force_e e code =
-            compile_f e t0 ++
+            comp_force e t0 ++
             code
         in
         comment "début do" ++
         List.fold_right force_e exprs nop ++
         comment "fin do"
 
-    | VEreturn -> nop
+    | VEreturn ->
+        alloc_heap 1 ++
+        li t0 0 ++
+        sw t0 areg (0, v0)
 
     | VEthunk e ->
         comment "début glaçon" ++
         compile_e e ++
         push v0 ++
         alloc_heap 2 ++
-        li t0 0x20 ++
+        li t0 32 ++
         sw t0 areg (0, v0) ++
         pop t0 ++
         sw t0 areg (4, v0) ++
         comment "fin glaçon"
 
-and compile_f e r = (* puts the forced result of e in r *)
+and comp_force e r = (* puts the forced result of e in r *)
     compile_e e ++
     push a0 ++
     move a0 v0 ++
