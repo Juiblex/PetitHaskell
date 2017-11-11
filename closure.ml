@@ -26,7 +26,8 @@ let rec conv_e arg bvars = function
             conv_e x (Vset.add x bvars) e))::(!fundefs);
         CEclos (name, args)
 
-    | LEbinop (b, e1, e2) -> CEbinop (b, conv_e arg bvars e1, conv_e arg bvars e2)
+    | LEbinop (b, e1, e2) ->
+        CEbinop (b, conv_e arg bvars e1, conv_e arg bvars e2)
 
     | LEnil -> CEnil
 
@@ -34,13 +35,15 @@ let rec conv_e arg bvars = function
         CEcond (conv_e arg bvars e1, conv_e arg bvars e2, conv_e arg bvars e3)
 
     | LElet (ldefs, e) ->
-        let bvars = List.fold_left (fun s d -> Vset.add d.lname s) bvars ldefs in
+        let bvars =
+            List.fold_left (fun s d -> Vset.add d.lname s) bvars ldefs in
         let cdefs = List.map (conv_d arg bvars) ldefs in
         CElet (cdefs, conv_e arg bvars e)
 
     | LEcase (l, e1, x, xs, e2) ->
         let bvars' = Vset.add x (Vset.add xs bvars) in
-        CEcase (conv_e arg bvars l, conv_e arg bvars e1, x, xs, conv_e arg bvars' e2)
+        CEcase (conv_e arg bvars l, conv_e arg bvars e1,
+            x, xs, conv_e arg bvars' e2)
 
     | LEdo exprs -> CEdo (List.map (conv_e arg bvars) exprs)
 

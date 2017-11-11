@@ -75,7 +75,7 @@ rule token = parse
         else if lexbuf.lex_start_p.pos_cnum = lexbuf.lex_start_p.pos_bol then
             IDENT0 { pid = s; pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p }
         else
-            IDENT1 { pid = s; pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p } }
+            IDENT1 { pid = s; pos = loc lexbuf.lex_start_p lexbuf.lex_curr_p }}
     | integer as s { CONST (Ast.PCint (int_of_string s)) }
     | _ { raise (Lexing_error "Invalid lexem") }
     | eof { EOF }

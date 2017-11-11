@@ -31,6 +31,7 @@ let rec lazify_e {tdesc = e} = match e with
 
     | TEreturn -> LEreturn
 
-and lazify_d {tname = id; tbody = e} = {lname = id; lbody = freeze (lazify_e e)}
+and lazify_d {tname = id; tbody = e} =
+    {lname = id; lbody = freeze (lazify_e e)}
 
 let lazify_p p = {ldefs = List.map lazify_d p.tdefs}

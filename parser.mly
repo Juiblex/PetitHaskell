@@ -103,7 +103,8 @@ expr:
         { {pdesc = PElet(defs, e); pos = loc $startpos $endpos} }
 
 |   CASE; matched = expr; OF; BEGIN; LB; RB; ARROW; empty = expr; SEMICOLON;
-        hd = IDENT1; COLON; tl = IDENT1; ARROW; nonempty = expr; SEMICOLON?; END
+        hd = IDENT1; COLON; tl = IDENT1; ARROW; nonempty = expr; SEMICOLON?;
+        END
         { {pdesc = PEcase(matched, empty, hd, tl, nonempty);
             pos = loc $startpos $endpos} }
 

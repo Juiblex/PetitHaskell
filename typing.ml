@@ -186,7 +186,8 @@ let rec w env {pdesc = expr; pos = pos} = match expr with
         begin match tes.typ with
             | Tlist u -> unify_p te.typ u e.pos;
                 {tdesc = TEbinop(Bcons, te, tes); typ = Tlist te.typ}
-            | u -> raise (Conflicting_types ((List.hd es).pos, u, Tlist te.typ))
+            | u -> raise
+                (Conflicting_types ((List.hd es).pos, u, Tlist te.typ))
         end
 
     | PEcond (e1, e2, e3) ->

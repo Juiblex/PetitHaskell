@@ -67,8 +67,8 @@ let paffiche p =
                 p_expr e1; p_expr e2; p_expr e3
             | PElet(ds, e) -> print_string "PElet "; p_pos p;
                 List.iter p_def ds; p_expr e
-            | PEcase(e1, e2, i1, i2, e3) -> print_string "PEcase ";
-                p_pos p; p_expr e1; p_expr e2; p_ident i1; p_ident i2; p_expr e3
+            | PEcase(e1, e2, i1, i2, e3) -> print_string "PEcase "; p_pos p;
+                p_expr e1; p_expr e2; p_ident i1; p_ident i2; p_expr e3
             | PEdo l -> print_string "PEdo "; p_pos p; List.iter p_expr l
             | PEreturn -> print_string "PEreturn "; p_pos p 
         end;
